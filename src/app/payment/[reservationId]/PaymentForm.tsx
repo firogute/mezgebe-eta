@@ -3,17 +3,30 @@
 import Image from "next/image";
 import { useState } from "react";
 import { submitPayment } from "@/lib/actions/submitPayment";
+import { updateUserPhone } from "@/lib/actions/user";
+import { normalizeEthiopianPhone } from "@/lib/phone";
 import { useRouter } from "next/navigation";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { useToast } from "@/components/ui/ToastProvider";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
 export default function PaymentForm({
   reservationId,
+  username,
+  initialPhone,
 }: {
   reservationId: string;
+  username: string;
+  initialPhone: string | null;
 }) {
+  const normalizedInitialPhone = normalizeEthiopianPhone(initialPhone || "");
   const [method, setMethod] = useState("Telebirr");
+  const [phone, setPhone] = useState(
+    normalizedInitialPhone ?? initialPhone ?? "",
+  );
+  const [phoneSaved, setPhoneSaved] = useState(Boolean(normalizedInitialPhone));
+  const [savingPhone, setSavingPhone] = useState(false);
   const [referenceLink, setReferenceLink] = useState("");
   const [receiptImageUrl, setReceiptImageUrl] = useState("");
   const [selectedFileName, setSelectedFileName] = useState("");
@@ -22,9 +35,38 @@ export default function PaymentForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+  const { showToast } = useToast();
 
   const primaryMethods = ["Telebirr", "CBE", "CBE Birr"];
   const secondaryMethods = ["Awash Bank", "Amole", "Other"];
+  const requiresPhone = !phoneSaved;
+
+  const handleSavePhone = async () => {
+    const normalizedPhone = normalizeEthiopianPhone(phone);
+    if (!normalizedPhone) {
+      setError(
+        "Use a valid phone format: 09..., 07..., 2519..., 2517..., +2519..., or +2517....",
+      );
+      showToast("Enter a valid Ethiopian phone number.", "error");
+      return;
+    }
+
+    setSavingPhone(true);
+    setError("");
+
+    const result = await updateUserPhone(username, normalizedPhone);
+    if (!result.success) {
+      setError(result.error || "Failed to save phone number.");
+      showToast(result.error || "Failed to save phone number.", "error");
+      setSavingPhone(false);
+      return;
+    }
+
+    setPhone(result.phone || normalizedPhone);
+    setPhoneSaved(true);
+    showToast("Phone number saved.", "success");
+    setSavingPhone(false);
+  };
 
   function uploadReceiptWithProgress(file: File) {
     return new Promise<string>((resolve, reject) => {
@@ -114,9 +156,10 @@ export default function PaymentForm({
       setUploadProgress(100);
     } catch (err) {
       console.error(err);
-      setError(
-        err instanceof Error ? err.message : "Failed to upload receipt image.",
-      );
+      const message =
+        err instanceof Error ? err.message : "Failed to upload receipt image.";
+      setError(message);
+      showToast(message, "error");
       setSelectedFileName("");
       setReceiptImageUrl("");
       setUploadProgress(0);
@@ -128,6 +171,11 @@ export default function PaymentForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (requiresPhone) {
+      setError("Please save your phone number before submitting payment.");
+      return;
+    }
 
     if (uploading) {
       setError("Please wait for the receipt upload to finish.");
@@ -149,9 +197,11 @@ export default function PaymentForm({
       referenceLink: referenceLink || undefined,
     });
     if (res.success) {
+      showToast("Payment submitted successfully.", "success");
       router.push("/receipt"); // Redirect to receipt check page
     } else {
       setError(res.error || "Failed to submit.");
+      showToast(res.error || "Failed to submit payment.", "error");
       setLoading(false);
     }
   };
@@ -161,6 +211,39 @@ export default function PaymentForm({
       {error && (
         <div className="p-3 bg-red-100 text-red-700 rounded-lg text-sm">
           {error}
+        </div>
+      )}
+
+      {requiresPhone && (
+        <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
+          <p className="text-sm font-semibold text-foreground">
+            Phone Number Required
+          </p>
+          <p className="text-xs text-muted-foreground">
+            This registered username has no phone number yet. Save one before
+            submitting payment.
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              type="tel"
+              value={phone}
+              onChange={(event) => {
+                setPhone(event.target.value);
+                setError("");
+              }}
+              placeholder="09... or +2519..."
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary"
+              disabled={savingPhone || loading || uploading}
+            />
+            <button
+              type="button"
+              onClick={handleSavePhone}
+              disabled={savingPhone || loading || uploading}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-60"
+            >
+              {savingPhone ? "Saving..." : "Save Phone"}
+            </button>
+          </div>
         </div>
       )}
 
@@ -285,7 +368,7 @@ export default function PaymentForm({
 
       <button
         type="submit"
-        disabled={loading || uploading}
+        disabled={loading || uploading || savingPhone || requiresPhone}
         className="w-full bg-accent text-accent-foreground py-3.5 rounded-xl font-medium hover:opacity-90 transition-opacity disabled:opacity-50 shadow-sm inline-flex items-center justify-center gap-2"
       >
         {loading ? (

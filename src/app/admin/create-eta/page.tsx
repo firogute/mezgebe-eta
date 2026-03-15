@@ -5,6 +5,7 @@ import { ChangeEvent, useState } from "react";
 import { createEtaEvent } from "@/lib/actions/admin";
 import { useRouter } from "next/navigation";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { useToast } from "@/components/ui/ToastProvider";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 const BANK_TYPE_OPTIONS = [
@@ -27,6 +28,7 @@ export default function CreateEtaPage() {
   const [imageUrl, setImageUrl] = useState("");
   const [selectedFileName, setSelectedFileName] = useState("");
   const router = useRouter();
+  const { showToast } = useToast();
 
   function uploadImageWithProgress(file: File) {
     return new Promise<string>((resolve, reject) => {
@@ -86,6 +88,7 @@ export default function CreateEtaPage() {
 
     if (!file.type.startsWith("image/")) {
       setError("Please select a valid image file.");
+      showToast("Please select a valid image file.", "error");
       event.target.value = "";
       setSelectedFileName("");
       setImageUrl("");
@@ -95,6 +98,7 @@ export default function CreateEtaPage() {
 
     if (file.size > MAX_FILE_SIZE_BYTES) {
       setError("Image size must be 5MB or smaller.");
+      showToast("Image size must be 5MB or smaller.", "error");
       event.target.value = "";
       setSelectedFileName("");
       setImageUrl("");
@@ -113,7 +117,10 @@ export default function CreateEtaPage() {
       setUploadProgress(100);
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : "Failed to upload image.");
+      const message =
+        err instanceof Error ? err.message : "Failed to upload image.";
+      setError(message);
+      showToast(message, "error");
       setSelectedFileName("");
       setImageUrl("");
       setUploadProgress(0);
@@ -149,12 +156,14 @@ export default function CreateEtaPage() {
       };
 
       await createEtaEvent(data);
+      showToast("Event created successfully.", "success");
       router.push("/admin");
     } catch (err) {
       console.error(err);
-      setError(
-        err instanceof Error ? err.message : "Failed to create Eta event",
-      );
+      const message =
+        err instanceof Error ? err.message : "Failed to create Eta event";
+      setError(message);
+      showToast(message, "error");
     }
     setLoading(false);
   }

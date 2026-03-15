@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateEtaEventAdmin } from "@/lib/actions/admin";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { useToast } from "@/components/ui/ToastProvider";
 
 const BANK_TYPE_OPTIONS = [
   "Telebirr",
@@ -49,6 +50,7 @@ export default function EditEtaEventForm(props: EditEtaEventFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+  const { showToast } = useToast();
   const normalizedBankType = bankType.trim();
   const shouldShowCustomBankTypeOption =
     normalizedBankType.length > 0 &&
@@ -73,10 +75,12 @@ export default function EditEtaEventForm(props: EditEtaEventFormProps) {
 
     if (!result.success) {
       setError(result.error || "Failed to update event.");
+      showToast(result.error || "Failed to update event.", "error");
       setLoading(false);
       return;
     }
 
+    showToast("Event updated successfully.", "success");
     router.push(`/admin/eta/${props.eventId}`);
     router.refresh();
   }

@@ -3,6 +3,7 @@
 import prisma from "../prisma";
 import { translateToAmharic } from "../translation";
 import { revalidatePath } from "next/cache";
+import { createAdminNotification } from "../notifications";
 
 function containsAmharicText(value: string) {
   return /[\u1200-\u137F\u1380-\u139F\u2D80-\u2DDF\uAB00-\uAB2F]/.test(value);
@@ -77,6 +78,12 @@ export async function createEtaEvent(data: {
     data: ticketsToCreate,
   });
 
+  await createAdminNotification({
+    title: "Event Created",
+    message: `${event.title} was created with ${data.totalTickets} tickets.`,
+    link: `/admin/eta/${event.id}`,
+  });
+
   return event;
 }
 
@@ -118,6 +125,13 @@ export async function updateEtaEventAdmin(data: {
     revalidatePath("/admin");
     revalidatePath(`/admin/eta/${data.eventId}`);
     revalidatePath(`/eta/${data.eventId}`);
+
+    await createAdminNotification({
+      title: "Event Updated",
+      message: `${data.title} was updated successfully.`,
+      link: `/admin/eta/${data.eventId}`,
+    });
+
     return { success: true };
   } catch (error) {
     console.error("ETA update failed", error);
@@ -152,6 +166,12 @@ export async function deleteEtaEventAdmin(data: { eventId: string }) {
     }
 
     await prisma.etaEvent.delete({ where: { id: data.eventId } });
+
+    await createAdminNotification({
+      title: "Event Deleted",
+      message: `${event.title} was deleted.`,
+      link: "/admin",
+    });
 
     revalidatePath("/admin");
     revalidatePath("/");
@@ -200,6 +220,13 @@ export async function updateTicketAdmin(data: {
     });
 
     revalidatePath("/admin/tickets");
+
+    await createAdminNotification({
+      title: "Ticket Updated",
+      message: `${ticketNumber} was updated to ${status}.`,
+      link: "/admin/tickets",
+    });
+
     return { success: true };
   } catch (error) {
     console.error("Ticket update failed", error);
@@ -226,6 +253,12 @@ export async function deleteTicketAdmin(data: { ticketId: string }) {
     }
 
     await prisma.ticket.delete({ where: { id: data.ticketId } });
+
+    await createAdminNotification({
+      title: "Ticket Deleted",
+      message: "An available ticket was deleted.",
+      link: "/admin/tickets",
+    });
 
     revalidatePath("/admin/tickets");
     return { success: true };

@@ -4,6 +4,7 @@ import { deleteTicketAdmin, updateTicketAdmin } from "@/lib/actions/admin";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { useAdminToast } from "@/app/admin/components/AdminToastProvider";
 
 type TicketRow = {
   id: string;
@@ -11,6 +12,7 @@ type TicketRow = {
   status: "AVAILABLE" | "RESERVED" | "SOLD";
   eventTitle: string;
   username: string | null;
+  phone: string | null;
 };
 
 export function TicketManagementTable({ tickets }: { tickets: TicketRow[] }) {
@@ -39,7 +41,8 @@ export function TicketManagementTable({ tickets }: { tickets: TicketRow[] }) {
     return (
       ticket.ticketNumber.toLowerCase().includes(keyword) ||
       ticket.eventTitle.toLowerCase().includes(keyword) ||
-      (ticket.username || "").toLowerCase().includes(keyword)
+      (ticket.username || "").toLowerCase().includes(keyword) ||
+      (ticket.phone || "").toLowerCase().includes(keyword)
     );
   });
 
@@ -155,6 +158,7 @@ export function TicketManagementTable({ tickets }: { tickets: TicketRow[] }) {
                   <tr>
                     <th className="px-4 py-3">Ticket</th>
                     <th className="px-4 py-3">Owner</th>
+                    <th className="px-4 py-3">Phone</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">Actions</th>
                   </tr>
@@ -180,6 +184,7 @@ function TicketRowEditor({ ticket }: { ticket: TicketRow }) {
   const [isPending, startTransition] = useTransition();
   const [action, setAction] = useState<"save" | "delete" | null>(null);
   const router = useRouter();
+  const { showToast } = useAdminToast();
 
   const onUpdate = () => {
     setError("");
@@ -193,10 +198,12 @@ function TicketRowEditor({ ticket }: { ticket: TicketRow }) {
 
       if (!result.success) {
         setError(result.error || "Failed to update ticket.");
+        showToast(result.error || "Failed to update ticket.", "error");
         setAction(null);
         return;
       }
 
+      showToast("Ticket updated successfully.", "success");
       router.refresh();
       setAction(null);
     });
@@ -216,10 +223,12 @@ function TicketRowEditor({ ticket }: { ticket: TicketRow }) {
       const result = await deleteTicketAdmin({ ticketId: ticket.id });
       if (!result.success) {
         setError(result.error || "Failed to delete ticket.");
+        showToast(result.error || "Failed to delete ticket.", "error");
         setAction(null);
         return;
       }
 
+      showToast("Ticket deleted successfully.", "success");
       router.refresh();
       setAction(null);
     });
@@ -240,6 +249,7 @@ function TicketRowEditor({ ticket }: { ticket: TicketRow }) {
       <td className="px-4 py-3 text-sm">
         {ticket.username ? `@${ticket.username}` : "-"}
       </td>
+      <td className="px-4 py-3 text-sm">{ticket.phone || "-"}</td>
       <td className="px-4 py-3">
         <select
           value={status}

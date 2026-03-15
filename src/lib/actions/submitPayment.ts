@@ -2,6 +2,8 @@
 
 import prisma from "../prisma";
 import { serializePaymentProof } from "../paymentProof";
+import { normalizeEthiopianPhone } from "../phone";
+import { createAdminNotification } from "../notifications";
 import {
   extractLeulReference,
   verifyPaymentLinkWithLeul,
@@ -49,6 +51,20 @@ export async function submitPayment(data: {
 
     if (!reservation || reservation.status !== "PENDING") {
       return { success: false, error: "Invalid or expired reservation." };
+    }
+
+    const userRows = await prisma.$queryRawUnsafe<
+      Array<{ phone: string | null }>
+    >('SELECT "phone" FROM "User" WHERE "id" = $1 LIMIT 1', reservation.userId);
+
+    const userPhone = userRows[0]?.phone || "";
+
+    if (!normalizeEthiopianPhone(userPhone)) {
+      return {
+        success: false,
+        error:
+          "Phone number is required before submitting payment. Please save your phone number first.",
+      };
     }
 
     const expectedTicketPrice = reservation.tickets[0]?.event?.ticketPrice;
@@ -177,6 +193,12 @@ export async function submitPayment(data: {
         }),
         status: "PENDING",
       },
+    });
+
+    await createAdminNotification({
+      title: "Payment Submitted",
+      message: `A new ${data.method} payment proof was submitted and is waiting for review.`,
+      link: "/admin/payments",
     });
 
     return { success: true };

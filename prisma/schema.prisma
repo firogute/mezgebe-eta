@@ -1,6 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
@@ -33,12 +32,19 @@ enum PaymentStatus {
   REJECTED
 }
 
+enum NotificationAudience {
+  ADMIN
+  USER
+}
+
 model User {
   id           String        @id @default(cuid())
   username     String        @unique
+  phone        String?
   password     String?       // Only required for ADMIN
   role         Role          @default(USER)
   reservations Reservation[]
+  notifications Notification[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 }
@@ -94,4 +100,20 @@ model Payment {
   status        PaymentStatus @default(PENDING)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+}
+
+model Notification {
+  id        String               @id @default(cuid())
+  audience  NotificationAudience
+  userId    String?
+  user      User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  title     String
+  message   String
+  link      String?
+  isRead    Boolean              @default(false)
+  readAt    DateTime?
+  createdAt DateTime             @default(now())
+
+  @@index([audience, isRead, createdAt])
+  @@index([userId, isRead, createdAt])
 }

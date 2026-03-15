@@ -65,6 +65,12 @@ export default async function AdminTicketDetailPage({
             </p>
           </div>
           <div>
+            <p className="text-muted-foreground">Phone Number</p>
+            <p className="font-medium">
+              {ticket.reservation?.user?.phone || "Not available"}
+            </p>
+          </div>
+          <div>
             <p className="text-muted-foreground">Reservation Status</p>
             <p className="font-medium">
               {ticket.reservation?.status || "NO RESERVATION"}

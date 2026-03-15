@@ -7,6 +7,7 @@ import {
   type TicketTemplateConfig,
 } from "@/lib/ticketTemplateConfig";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { useToast } from "@/components/ui/ToastProvider";
 
 const colorFields: Array<{
   key: keyof TicketTemplateConfig;
@@ -30,6 +31,7 @@ export function TicketStyleEditor({
   const [feedback, setFeedback] = useState("");
   const [isPending, startTransition] = useTransition();
   const sampleDate = new Date("2026-03-15T12:00:00Z");
+  const { showToast } = useToast();
 
   function updateField<K extends keyof TicketTemplateConfig>(
     key: K,
@@ -53,12 +55,15 @@ export function TicketStyleEditor({
       const savedConfig = result.success ? result.config : null;
 
       if (!savedConfig) {
-        setFeedback(result.error || "Failed to save changes.");
+        const message = result.error || "Failed to save changes.";
+        setFeedback(message);
+        showToast(message, "error");
         return;
       }
 
       setConfig(savedConfig);
       setFeedback("Ticket template updated.");
+      showToast("Ticket style updated.", "success");
     });
   }
 
@@ -228,7 +233,7 @@ export function TicketStyleEditor({
         </div>
 
         <div
-          className="relative mt-6 overflow-hidden rounded-[32px] border p-6 shadow-[0_24px_60px_rgba(0,0,0,0.12)]"
+          className="relative mt-6 overflow-hidden rounded-4xl border p-6 shadow-[0_24px_60px_rgba(0,0,0,0.12)]"
           style={{
             background: `linear-gradient(145deg, ${config.backgroundColor}, ${config.accentSoftColor})`,
             borderColor: config.borderColor,
@@ -236,7 +241,7 @@ export function TicketStyleEditor({
           }}
         >
           <div
-            className="absolute right-[-38px] top-10 rotate-[32deg] text-5xl font-black opacity-10"
+            className="absolute -right-9.5 top-10 rotate-32 text-5xl font-black opacity-10"
             style={{ color: config.accentColor }}
           >
             {config.watermarkText}

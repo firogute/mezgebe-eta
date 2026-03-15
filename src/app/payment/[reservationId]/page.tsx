@@ -19,7 +19,11 @@ export default async function PaymentPage({
   const reservation = await prisma.reservation.findUnique({
     where: { id: reservationId },
     include: {
-      user: true,
+      user: {
+        select: {
+          username: true,
+        },
+      },
       payment: true,
       tickets: {
         include: { event: true }, // We need event for calculating price
@@ -33,6 +37,11 @@ export default async function PaymentPage({
 
   const event = reservation.tickets[0]?.event;
   if (!event) return notFound();
+
+  const userPhoneRows = await prisma.$queryRawUnsafe<
+    Array<{ phone: string | null }>
+  >('SELECT "phone" FROM "User" WHERE "id" = $1 LIMIT 1', reservation.userId);
+  const reservationPhone = userPhoneRows[0]?.phone || null;
 
   const ticketCount = reservation.tickets.length;
   const totalPrice = ticketCount * event.ticketPrice;
@@ -81,12 +90,19 @@ export default async function PaymentPage({
                 {totalPrice} Birr
               </p>
             </div>
+            <div>
+              <p className="text-xs uppercase text-muted-foreground">Phone</p>
+              <p className="mt-2 font-semibold text-foreground">
+                {reservationPhone || "Not available"}
+              </p>
+            </div>
           </div>
 
           <div className="mt-6">
             <VerifiedTicketDownload
               eventTitle={event.title}
               username={reservation.user.username}
+              phoneNumber={reservationPhone}
               ticketNumbers={reservation.tickets.map(
                 (ticket) => ticket.ticketNumber,
               )}
@@ -163,6 +179,12 @@ export default async function PaymentPage({
                 {totalPrice} Birr
               </span>
             </div>
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-muted-foreground">Phone Number</span>
+              <span className="text-foreground font-medium">
+                {reservationPhone || "Not available"}
+              </span>
+            </div>
           </div>
 
           {(event.bankType || event.accountName || event.accountNumber) && (
@@ -223,7 +245,11 @@ export default async function PaymentPage({
         </section>
 
         <section className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-sm">
-          <PaymentForm reservationId={reservationId} />
+          <PaymentForm
+            reservationId={reservationId}
+            username={reservation.user.username}
+            initialPhone={reservationPhone}
+          />
         </section>
       </div>
     </div>

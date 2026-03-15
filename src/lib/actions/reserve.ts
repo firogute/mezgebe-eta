@@ -1,21 +1,65 @@
 "use server";
 
 import prisma from "../prisma";
+import { normalizeEthiopianPhone } from "../phone";
+import { createAdminNotification } from "../notifications";
 
 export async function reserveTickets(data: {
   eventId: string;
   username: string;
   ticketIds: string[];
+  phone?: string;
 }) {
   try {
+    const normalizedUsername = data.username.trim().toLowerCase();
+    const normalizedPhone = data.phone
+      ? normalizeEthiopianPhone(data.phone)
+      : null;
+
     // 1. Ensure user exists or create
-    let user = await prisma.user.findUnique({
-      where: { username: data.username },
-    });
-    if (!user) {
-      user = await prisma.user.create({
-        data: { username: data.username, role: "USER" },
+    const existingRows = await prisma.$queryRawUnsafe<
+      Array<{ id: string; phone: string | null }>
+    >(
+      'SELECT "id", "phone" FROM "User" WHERE "username" = $1 LIMIT 1',
+      normalizedUsername,
+    );
+
+    let userId = existingRows[0]?.id || null;
+    const existingPhone = existingRows[0]?.phone || null;
+
+    if (!userId) {
+      if (!normalizedPhone) {
+        throw new Error(
+          "Phone number is required before completing your purchase.",
+        );
+      }
+
+      const createdUser = await prisma.user.create({
+        data: {
+          username: normalizedUsername,
+          role: "USER",
+        },
       });
+
+      userId = createdUser.id;
+
+      await prisma.$executeRawUnsafe(
+        'UPDATE "User" SET "phone" = $1 WHERE "id" = $2',
+        normalizedPhone,
+        userId,
+      );
+    } else if (!normalizeEthiopianPhone(existingPhone || "")) {
+      if (!normalizedPhone) {
+        throw new Error(
+          "This username is missing a phone number. Add one to continue.",
+        );
+      }
+
+      await prisma.$executeRawUnsafe(
+        'UPDATE "User" SET "phone" = $1 WHERE "id" = $2',
+        normalizedPhone,
+        userId,
+      );
     }
 
     // 2. Wrap in transaction to prevent race conditions
@@ -54,7 +98,7 @@ export async function reserveTickets(data: {
       // Create Reservation
       const reservation = await tx.reservation.create({
         data: {
-          userId: user!.id,
+          userId: userId!,
           expiresAt,
           status: "PENDING",
         },
@@ -67,6 +111,12 @@ export async function reserveTickets(data: {
           status: "RESERVED",
           reservationId: reservation.id,
         },
+      });
+
+      await createAdminNotification({
+        title: "New Reservation",
+        message: `@${normalizedUsername} reserved ${ticketIds.length} ticket${ticketIds.length === 1 ? "" : "s"}.`,
+        link: "/admin/payments",
       });
 
       return { success: true, reservationId: reservation.id };

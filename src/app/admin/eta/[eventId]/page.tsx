@@ -24,6 +24,7 @@ export default async function AdminEtaDetailPage({
                 select: {
                   id: true,
                   username: true,
+                  phone: true,
                 },
               },
               tickets: {
@@ -111,6 +112,7 @@ export default async function AdminEtaDetailPage({
         const username = reservation.user.username;
         const current = map.get(username) || {
           username,
+          phone: reservation.user.phone || "Not available",
           tickets: 0,
           latestActivity: reservation.createdAt,
         };
@@ -122,7 +124,7 @@ export default async function AdminEtaDetailPage({
 
         map.set(username, current);
         return map;
-      }, new Map<string, { username: string; tickets: number; latestActivity: Date }>())
+      }, new Map<string, { username: string; phone: string; tickets: number; latestActivity: Date }>())
       .values(),
   )
     .sort((left, right) => right.tickets - left.tickets)
@@ -383,6 +385,9 @@ export default async function AdminEtaDetailPage({
                       {index + 1}. @{buyer.username}
                     </p>
                     <p className="text-xs text-muted-foreground">
+                      {buyer.phone}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
                       Last activity{" "}
                       {new Date(buyer.latestActivity).toLocaleDateString()}
                     </p>
@@ -452,6 +457,9 @@ export default async function AdminEtaDetailPage({
                   <div>
                     <p className="text-sm font-semibold text-foreground">
                       @{reservation.user.username}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {reservation.user.phone || "Not available"}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
                       {reservation.tickets.length} ticket

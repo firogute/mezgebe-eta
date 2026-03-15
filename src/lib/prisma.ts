@@ -18,7 +18,23 @@ const pool = new Pool({ connectionString });
 const adapter = new PrismaNeon(pool);
 
 const prismaClientSingleton = () => {
-  return new PrismaClient({ adapter });
+  try {
+    return new PrismaClient({ adapter });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    const adapterUnsupported = message.includes(
+      '"adapter" property can only be provided',
+    );
+
+    if (!adapterUnsupported) {
+      throw error;
+    }
+
+    console.warn(
+      "Prisma adapter is unsupported by the current generated client; falling back to default PrismaClient.",
+    );
+    return new PrismaClient();
+  }
 };
 
 declare const globalThis: {

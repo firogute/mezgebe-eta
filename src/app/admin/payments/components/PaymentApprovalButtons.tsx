@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { verifyPayment } from "@/lib/actions/payment";
 import { useRouter } from "next/navigation";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { useAdminToast } from "@/app/admin/components/AdminToastProvider";
 
 export function PaymentApprovalButtons({ paymentId }: { paymentId: string }) {
   const [isPending, startTransition] = useTransition();
@@ -11,11 +12,24 @@ export function PaymentApprovalButtons({ paymentId }: { paymentId: string }) {
     null,
   );
   const router = useRouter();
+  const { showToast } = useAdminToast();
 
   function handleAction(action: "APPROVE" | "REJECT") {
     setActiveAction(action);
     startTransition(async () => {
-      await verifyPayment(paymentId, action);
+      const result = await verifyPayment(paymentId, action);
+      if (!result.success) {
+        showToast(result.error || "Action failed.", "error");
+        setActiveAction(null);
+        return;
+      }
+
+      showToast(
+        action === "APPROVE"
+          ? "Payment approved successfully."
+          : "Payment rejected successfully.",
+        "success",
+      );
       router.refresh();
       setActiveAction(null);
     });

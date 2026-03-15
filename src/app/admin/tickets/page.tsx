@@ -18,6 +18,7 @@ export default async function AdminTicketsPage() {
           user: {
             select: {
               username: true,
+              phone: true,
             },
           },
         },
@@ -31,6 +32,7 @@ export default async function AdminTicketsPage() {
     status: ticket.status,
     eventTitle: ticket.event.title,
     username: ticket.reservation?.user.username || null,
+    phone: ticket.reservation?.user.phone || null,
   }));
 
   return (

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { deleteEtaEventAdmin } from "@/lib/actions/admin";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { useAdminToast } from "@/app/admin/components/AdminToastProvider";
 
 export function EtaEventActions({
   eventId,
@@ -16,6 +17,7 @@ export function EtaEventActions({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState("");
   const router = useRouter();
+  const { showToast } = useAdminToast();
 
   function handleDelete() {
     const confirmed = window.confirm(
@@ -30,8 +32,10 @@ export function EtaEventActions({
       const result = await deleteEtaEventAdmin({ eventId });
       if (!result.success) {
         setError(result.error || "Failed to delete event.");
+        showToast(result.error || "Failed to delete event.", "error");
         return;
       }
+      showToast("Event deleted successfully.", "success");
       router.refresh();
       router.push("/admin");
     });

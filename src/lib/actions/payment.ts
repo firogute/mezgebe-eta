@@ -2,6 +2,10 @@
 
 import prisma from "../prisma";
 import { revalidatePath } from "next/cache";
+import {
+  createAdminNotification,
+  createUserNotification,
+} from "../notifications";
 
 export async function verifyPayment(
   paymentId: string,
@@ -36,6 +40,20 @@ export async function verifyPayment(
         where: { id: { in: ticketIds } },
         data: { status: "SOLD" },
       });
+
+      await createUserNotification({
+        userId: payment.reservation.userId,
+        title: "Payment Approved",
+        message:
+          "Your payment was approved and your ticket is ready to download.",
+        link: `/payment/${payment.reservationId}`,
+      });
+
+      await createAdminNotification({
+        title: "Payment Approved",
+        message: `Payment ${paymentId.slice(0, 8)} was approved successfully.`,
+        link: "/admin/payments",
+      });
     } else {
       // REJECT action
       // 1. Mark Payment as REJECTED
@@ -53,6 +71,20 @@ export async function verifyPayment(
       await prisma.ticket.updateMany({
         where: { id: { in: ticketIds } },
         data: { status: "AVAILABLE", reservationId: null },
+      });
+
+      await createUserNotification({
+        userId: payment.reservation.userId,
+        title: "Payment Rejected",
+        message:
+          "Your payment proof was rejected. Please submit a valid payment again.",
+        link: `/payment/${payment.reservationId}`,
+      });
+
+      await createAdminNotification({
+        title: "Payment Rejected",
+        message: `Payment ${paymentId.slice(0, 8)} was rejected and tickets were released.`,
+        link: "/admin/payments",
       });
     }
 

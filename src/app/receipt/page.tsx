@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { getTicketTemplateConfig } from "@/lib/ticketTemplate";
 import { VerifiedTicketDownload } from "@/components/tickets/VerifiedTicketDownload";
+import { PhoneNumberForm } from "./PhoneNumberForm";
 
 export const dynamic = "force-dynamic";
 
@@ -79,6 +80,22 @@ export default async function ReceiptPage({
             Forgot your username? Retrieve it using ticket number
           </Link>
         </div>
+
+        {user && (
+          <PhoneNumberForm
+            username={user.username}
+            initialPhone={user.phone ?? null}
+          />
+        )}
+
+        {user && (
+          <div className="mb-6 rounded-xl border border-border bg-muted/20 p-4 text-sm">
+            <p className="text-muted-foreground">Phone Number</p>
+            <p className="mt-1 font-semibold text-foreground">
+              {user.phone || "Not available"}
+            </p>
+          </div>
+        )}
 
         {username && !user && (
           <div className="p-4 bg-muted text-center rounded-xl text-muted-foreground">
@@ -166,6 +183,7 @@ export default async function ReceiptPage({
                           res.tickets[0]?.event?.title || "Verified Ticket"
                         }
                         username={user?.username || username}
+                        phoneNumber={user?.phone ?? null}
                         ticketNumbers={res.tickets.map(
                           (ticket) => ticket.ticketNumber,
                         )}

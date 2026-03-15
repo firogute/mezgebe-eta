@@ -17,6 +17,7 @@ function sanitizeFileName(value: string) {
 export function VerifiedTicketDownload({
   eventTitle,
   username,
+  phoneNumber,
   ticketNumbers,
   ticketPrice,
   cutDate,
@@ -24,6 +25,7 @@ export function VerifiedTicketDownload({
 }: {
   eventTitle: string;
   username: string;
+  phoneNumber?: string | null;
   ticketNumbers: string[];
   ticketPrice: number;
   cutDate: string | Date;
@@ -225,6 +227,12 @@ export function VerifiedTicketDownload({
               </p>
               <p className="mt-2 text-xl font-semibold">@{username}</p>
               <div className="mt-4 grid grid-cols-1 gap-3 text-sm">
+                <div>
+                  <p style={{ color: template.mutedTextColor }}>Phone</p>
+                  <p className="mt-1 font-semibold">
+                    {phoneNumber || "Not available"}
+                  </p>
+                </div>
                 <div>
                   <p style={{ color: template.mutedTextColor }}>Price</p>
                   <p className="mt-1 font-semibold">

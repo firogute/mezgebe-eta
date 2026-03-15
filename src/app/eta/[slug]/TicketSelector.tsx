@@ -5,6 +5,8 @@ import { checkUsername, registerUsername } from "@/lib/actions/user";
 import { reserveTickets } from "@/lib/actions/reserve";
 import { useRouter } from "next/navigation";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { normalizeEthiopianPhone } from "@/lib/phone";
+import { useToast } from "@/components/ui/ToastProvider";
 
 function getTicketDisplayNumber(ticketNumber: string) {
   const parts = ticketNumber.split("-");
@@ -35,7 +37,10 @@ export default function TicketSelector({
   const [registering, setRegistering] = useState(false);
   const [error, setError] = useState("");
   const [ticketSearch, setTicketSearch] = useState("");
+  const [phone, setPhone] = useState("");
+  const [usernameNeedsPhone, setUsernameNeedsPhone] = useState(false);
   const router = useRouter();
+  const { showToast } = useToast();
 
   const isOwnedUsername = username.length >= 3 && username === ownedUsername;
   const displayUsernameStatus = isOwnedUsername ? "OWNED" : usernameStatus;
@@ -53,6 +58,9 @@ export default function TicketSelector({
   const selectedTickets = availableTickets.filter((ticket) =>
     selectedTicketIds.includes(ticket.id),
   );
+  const normalizedPhoneInput = phone.trim()
+    ? normalizeEthiopianPhone(phone)
+    : null;
 
   // Debounce Username Check
   useEffect(() => {
@@ -67,16 +75,36 @@ export default function TicketSelector({
     const timer = setTimeout(async () => {
       setUsernameStatus("CHECKING");
       const res = await checkUsername(username);
-      if (res.available) setUsernameStatus("AVAILABLE");
-      else setUsernameStatus("TAKEN");
+      if (res.available) {
+        setUsernameStatus("AVAILABLE");
+        setUsernameNeedsPhone(true);
+      } else {
+        setUsernameStatus("TAKEN");
+        setUsernameNeedsPhone(!res.hasPhone);
+      }
     }, 600); // 600ms debounce
 
     return () => clearTimeout(timer);
   }, [ownedUsername, username]);
 
+  // For remembered/owned usernames, explicitly check whether a phone exists.
+  useEffect(() => {
+    if (!isOwnedUsername) {
+      return;
+    }
+
+    const run = async () => {
+      const res = await checkUsername(username);
+      setUsernameNeedsPhone(!res.available && !res.hasPhone);
+    };
+
+    run();
+  }, [isOwnedUsername, username]);
+
   const handleRegister = async () => {
     if (username.length < 3) {
       setError("Username must be at least 3 characters.");
+      showToast("Please insert a username.", "error");
       return;
     }
 
@@ -84,22 +112,36 @@ export default function TicketSelector({
       setError(
         "This username is already registered. You can continue to buy tickets with it.",
       );
+      showToast("Username is already registered.", "error");
       return;
     }
 
     setRegistering(true);
     setError("");
 
-    const result = await registerUsername(username);
+    const normalizedPhone = normalizeEthiopianPhone(phone);
+    if (!normalizedPhone) {
+      setError(
+        "Phone is required. Use 09..., 07..., 2519..., 2517..., +2519..., or +2517....",
+      );
+      showToast("Phone number is required to register username.", "error");
+      setRegistering(false);
+      return;
+    }
+
+    const result = await registerUsername(username, normalizedPhone);
     if (!result.success) {
       setError(result.error || "Failed to register username");
+      showToast(result.error || "Failed to register username", "error");
       setRegistering(false);
       return;
     }
 
     localStorage.setItem("mezgebe_username", username);
     setOwnedUsername(username);
+    setUsernameNeedsPhone(false);
     setUsernameStatus("IDLE");
+    showToast("Username registered successfully.", "success");
     setRegistering(false);
   };
 
@@ -111,6 +153,7 @@ export default function TicketSelector({
 
       if (current.length >= maxAllowed) {
         setError(`You can select up to ${maxAllowed} tickets.`);
+        showToast(`You can select up to ${maxAllowed} tickets.`, "error");
         return current;
       }
 
@@ -130,16 +173,29 @@ export default function TicketSelector({
   const handleReserve = async () => {
     if (username.length < 3) {
       setError("Username must be at least 3 characters.");
+      showToast("Please insert username before proceeding.", "error");
       return;
     }
 
     if (selectedTicketIds.length === 0) {
       setError("Choose at least one ticket number before continuing.");
+      showToast("Please choose at least one ticket.", "error");
       return;
     }
 
     setLoading(true);
     setError("");
+
+    const normalizedPhone = normalizedPhoneInput;
+
+    if (phone.trim() && !normalizedPhone) {
+      setError(
+        "Use a valid phone format: 09..., 07..., 2519..., 2517..., +2519..., or +2517....",
+      );
+      showToast("Please insert a valid phone number.", "error");
+      setLoading(false);
+      return;
+    }
 
     let resolvedStatus: "OWNED" | "AVAILABLE" | "TAKEN" | "CHECKING" | "IDLE" =
       displayUsernameStatus;
@@ -153,11 +209,24 @@ export default function TicketSelector({
       const lookup = await checkUsername(username);
       resolvedStatus = lookup.available ? "AVAILABLE" : "TAKEN";
       setUsernameStatus(lookup.available ? "AVAILABLE" : "TAKEN");
+      setUsernameNeedsPhone(lookup.available || !lookup.hasPhone);
     }
 
     // AVAILABLE means not yet registered, so require explicit registration first.
     if (resolvedStatus === "AVAILABLE") {
       setError("Please register this username first, then continue.");
+      showToast("Please register username first.", "error");
+      setLoading(false);
+      return;
+    }
+
+    const finalLookup = await checkUsername(username);
+    if (!finalLookup.available && !finalLookup.hasPhone && !normalizedPhone) {
+      setUsernameNeedsPhone(true);
+      setError(
+        "This username does not have a phone number yet. Add it to continue.",
+      );
+      showToast("Please insert phone number to continue.", "error");
       setLoading(false);
       return;
     }
@@ -166,16 +235,19 @@ export default function TicketSelector({
       eventId,
       username,
       ticketIds: selectedTicketIds,
+      phone: normalizedPhone || undefined,
     });
     if (res.success && "reservationId" in res) {
       // Save their username locally
       localStorage.setItem("mezgebe_username", username);
       setOwnedUsername(username);
+      showToast("Tickets reserved. Continue with payment.", "success");
       router.push(`/payment/${res.reservationId}`);
     } else {
-      setError(
-        "error" in res ? (res.error as string) : "Failed to reserve tickets",
-      );
+      const message =
+        "error" in res ? (res.error as string) : "Failed to reserve tickets";
+      showToast(message, "error");
+      setError(message);
       setLoading(false);
     }
   };
@@ -210,6 +282,7 @@ export default function TicketSelector({
                   e.target.value.replace(/[^a-zA-Z0-9_]/g, "").toLowerCase(),
                 );
                 setUsernameStatus("IDLE");
+                setUsernameNeedsPhone(false);
                 setError("");
               }}
               className="w-full pl-8 p-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary outline-none"
@@ -237,6 +310,29 @@ export default function TicketSelector({
             {displayUsernameStatus === "OWNED" && `✔ Verified (Your Username)`}
           </div>
 
+          {(displayUsernameStatus === "AVAILABLE" || usernameNeedsPhone) && (
+            <div className="mt-3 space-y-1">
+              <label className="block text-sm font-medium text-foreground">
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => {
+                  setPhone(e.target.value);
+                  setError("");
+                }}
+                className="w-full p-2 border border-border rounded-lg bg-background focus:ring-2 focus:ring-primary outline-none"
+                placeholder="09..., 07..., 2519..., or +2519..."
+                disabled={loading || registering}
+              />
+              <p className="text-xs text-muted-foreground">
+                Required when registering or when this username has no saved
+                phone.
+              </p>
+            </div>
+          )}
+
           <button
             type="button"
             onClick={handleRegister}
@@ -244,6 +340,7 @@ export default function TicketSelector({
               loading ||
               registering ||
               username.length < 3 ||
+              !phone.trim() ||
               displayUsernameStatus === "TAKEN" ||
               displayUsernameStatus === "CHECKING" ||
               displayUsernameStatus === "OWNED"
@@ -390,9 +487,7 @@ export default function TicketSelector({
         disabled={
           loading ||
           registering ||
-          username.length < 3 ||
-          (displayUsernameStatus === "CHECKING" && !isOwnedUsername) ||
-          selectedTicketIds.length === 0
+          (displayUsernameStatus === "CHECKING" && !isOwnedUsername)
         }
         className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl font-medium transition-all duration-200 hover:-translate-y-0.5 hover:opacity-95 disabled:opacity-50 shadow-sm inline-flex items-center justify-center gap-2"
       >

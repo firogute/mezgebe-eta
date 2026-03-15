@@ -4,6 +4,7 @@ import { useState } from "react";
 import { authenticateAdmin } from "@/lib/actions/auth";
 import { useRouter } from "next/navigation";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { useToast } from "@/components/ui/ToastProvider";
 
 export default function AdminLoginPage() {
   const [username, setUsername] = useState("");
@@ -11,6 +12,7 @@ export default function AdminLoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { showToast } = useToast();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,9 +21,12 @@ export default function AdminLoginPage() {
 
     const result = await authenticateAdmin(username, password);
     if (result.success) {
+      showToast("Admin login successful.", "success");
       router.push("/admin");
     } else {
-      setError(result.error || "Login failed");
+      const message = result.error || "Login failed";
+      setError(message);
+      showToast(message, "error");
     }
     setLoading(false);
   };
