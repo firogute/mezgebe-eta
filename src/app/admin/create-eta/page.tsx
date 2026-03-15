@@ -7,6 +7,17 @@ import { useRouter } from "next/navigation";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const BANK_TYPE_OPTIONS = [
+  "Telebirr",
+  "CBE",
+  "CBE Birr",
+  "Dashen Bank",
+  "Bank of Abyssinia",
+  "Awash Bank",
+  "M-Pesa",
+  "Amole",
+  "Other",
+];
 
 export default function CreateEtaPage() {
   const [loading, setLoading] = useState(false);
@@ -131,6 +142,9 @@ export default function CreateEtaPage() {
         ticketPrice: parseFloat(formData.get("ticketPrice") as string),
         totalTickets: parseInt(formData.get("totalTickets") as string),
         deadline: new Date(formData.get("deadline") as string),
+        bankType: formData.get("bankType") as string,
+        accountName: formData.get("accountName") as string,
+        accountNumber: formData.get("accountNumber") as string,
         image: imageUrl || undefined,
       };
 
@@ -268,6 +282,58 @@ export default function CreateEtaPage() {
                   )}
                 </div>
               )}
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-4">
+            <p className="text-sm font-semibold text-foreground">
+              Payment Account Details
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Bank Type
+                </label>
+                <select
+                  name="bankType"
+                  required
+                  className="w-full p-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
+                  defaultValue=""
+                >
+                  <option value="" disabled>
+                    Select bank type
+                  </option>
+                  {BANK_TYPE_OPTIONS.map((bankType) => (
+                    <option key={bankType} value={bankType}>
+                      {bankType}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Account Name
+                </label>
+                <input
+                  name="accountName"
+                  required
+                  className="w-full p-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
+                  placeholder="e.g. Mezgebe Trading PLC"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Account Number
+              </label>
+              <input
+                name="accountNumber"
+                required
+                className="w-full p-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
+                placeholder="Enter destination account number"
+              />
             </div>
           </div>
 

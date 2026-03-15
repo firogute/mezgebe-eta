@@ -52,6 +52,9 @@ model EtaEvent {
   totalTickets  Int
   deadline      DateTime
   image         String?
+  bankType      String?
+  accountName   String?
+  accountNumber String?
   tickets       Ticket[]
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt

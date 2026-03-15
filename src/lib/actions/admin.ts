@@ -33,10 +33,16 @@ export async function createEtaEvent(data: {
   ticketPrice: number;
   totalTickets: number;
   deadline: Date;
+  bankType: string;
+  accountName: string;
+  accountNumber: string;
   image?: string;
 }) {
   const normalizedDescription = data.descriptionEn.trim();
   const descriptionAm = await resolveAmharicDescription(normalizedDescription);
+  const bankType = data.bankType.trim();
+  const accountName = data.accountName.trim();
+  const accountNumber = data.accountNumber.trim();
 
   // 2. Create Event
   const event = await prisma.etaEvent.create({
@@ -47,6 +53,9 @@ export async function createEtaEvent(data: {
       ticketPrice: data.ticketPrice,
       totalTickets: data.totalTickets,
       deadline: data.deadline,
+      bankType,
+      accountName,
+      accountNumber,
       image: data.image,
     },
   });
@@ -77,6 +86,9 @@ export async function updateEtaEventAdmin(data: {
   descriptionEn: string;
   ticketPrice: number;
   deadline: Date;
+  bankType: string;
+  accountName: string;
+  accountNumber: string;
   image?: string;
 }) {
   try {
@@ -84,6 +96,9 @@ export async function updateEtaEventAdmin(data: {
     const descriptionAm = await resolveAmharicDescription(
       normalizedDescription,
     );
+    const bankType = data.bankType.trim();
+    const accountName = data.accountName.trim();
+    const accountNumber = data.accountNumber.trim();
 
     await prisma.etaEvent.update({
       where: { id: data.eventId },
@@ -93,6 +108,9 @@ export async function updateEtaEventAdmin(data: {
         descriptionAm,
         ticketPrice: data.ticketPrice,
         deadline: data.deadline,
+        bankType,
+        accountName,
+        accountNumber,
         image: data.image || null,
       },
     });

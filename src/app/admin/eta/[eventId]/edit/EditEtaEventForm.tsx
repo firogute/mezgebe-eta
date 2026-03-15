@@ -11,6 +11,9 @@ type EditEtaEventFormProps = {
   initialDescriptionEn: string;
   initialTicketPrice: number;
   initialDeadlineValue: string;
+  initialBankType?: string | null;
+  initialAccountName?: string | null;
+  initialAccountNumber?: string | null;
   initialImage?: string | null;
 };
 
@@ -23,6 +26,13 @@ export default function EditEtaEventForm(props: EditEtaEventFormProps) {
     String(props.initialTicketPrice),
   );
   const [deadline, setDeadline] = useState(props.initialDeadlineValue);
+  const [bankType, setBankType] = useState(props.initialBankType || "");
+  const [accountName, setAccountName] = useState(
+    props.initialAccountName || "",
+  );
+  const [accountNumber, setAccountNumber] = useState(
+    props.initialAccountNumber || "",
+  );
   const [image, setImage] = useState(props.initialImage || "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -39,6 +49,9 @@ export default function EditEtaEventForm(props: EditEtaEventFormProps) {
       descriptionEn,
       ticketPrice: parseFloat(ticketPrice),
       deadline: new Date(deadline),
+      bankType,
+      accountName,
+      accountNumber,
       image: image || undefined,
     });
 
@@ -105,6 +118,47 @@ export default function EditEtaEventForm(props: EditEtaEventFormProps) {
             value={deadline}
             onChange={(e) => setDeadline(e.target.value)}
             type="datetime-local"
+            required
+            className="w-full p-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
+          />
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-4">
+        <p className="text-sm font-semibold text-foreground">
+          Payment Account Details
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Bank Type</label>
+            <input
+              value={bankType}
+              onChange={(e) => setBankType(e.target.value)}
+              required
+              className="w-full p-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
+              placeholder="e.g. Telebirr, CBE"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Account Name
+            </label>
+            <input
+              value={accountName}
+              onChange={(e) => setAccountName(e.target.value)}
+              required
+              className="w-full p-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Account Number
+          </label>
+          <input
+            value={accountNumber}
+            onChange={(e) => setAccountNumber(e.target.value)}
             required
             className="w-full p-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
           />

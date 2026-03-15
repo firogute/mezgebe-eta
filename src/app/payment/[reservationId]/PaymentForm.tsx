@@ -270,8 +270,9 @@ export default function PaymentForm({
           Bank/Reference Link (Optional)
         </label>
         <p className="text-xs text-muted-foreground mb-3">
-          If your bank/app gives a transfer link or transaction URL, add it
-          here.
+          If your bank/app gives a payment link or transaction URL, add it here.
+          We verify links using Leul Verifier and block duplicate paid
+          references.
         </p>
         <input
           type="url"

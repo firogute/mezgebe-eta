@@ -81,7 +81,9 @@ export default function TicketSelector({
     }
 
     if (displayUsernameStatus === "TAKEN") {
-      setError("This username is already registered. You can continue to buy tickets with it.");
+      setError(
+        "This username is already registered. You can continue to buy tickets with it.",
+      );
       return;
     }
 
@@ -143,7 +145,10 @@ export default function TicketSelector({
       displayUsernameStatus;
 
     // If user typed manually and debounce has not finished, do an immediate availability check.
-    if (!isOwnedUsername && (usernameStatus === "IDLE" || usernameStatus === "CHECKING")) {
+    if (
+      !isOwnedUsername &&
+      (usernameStatus === "IDLE" || usernameStatus === "CHECKING")
+    ) {
       setUsernameStatus("CHECKING");
       const lookup = await checkUsername(username);
       resolvedStatus = lookup.available ? "AVAILABLE" : "TAKEN";

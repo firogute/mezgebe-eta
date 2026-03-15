@@ -46,6 +46,9 @@ export default async function AdminEtaEditPage({
           initialDescriptionEn={event.descriptionEn}
           initialTicketPrice={event.ticketPrice}
           initialDeadlineValue={toDateTimeLocalValue(new Date(event.deadline))}
+          initialBankType={event.bankType}
+          initialAccountName={event.accountName}
+          initialAccountNumber={event.accountNumber}
           initialImage={event.image}
         />
       </div>

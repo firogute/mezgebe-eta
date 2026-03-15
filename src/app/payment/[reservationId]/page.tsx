@@ -165,6 +165,42 @@ export default async function PaymentPage({
             </div>
           </div>
 
+          {(event.bankType || event.accountName || event.accountNumber) && (
+            <div className="rounded-xl border border-border bg-card/60 p-4 mb-6">
+              <p className="text-xs uppercase text-muted-foreground tracking-wide mb-3">
+                Payment Destination
+              </p>
+              <div className="space-y-2 text-sm">
+                {event.bankType && (
+                  <p>
+                    <span className="text-muted-foreground">Bank Type:</span>{" "}
+                    <span className="font-semibold text-foreground">
+                      {event.bankType}
+                    </span>
+                  </p>
+                )}
+                {event.accountName && (
+                  <p>
+                    <span className="text-muted-foreground">Account Name:</span>{" "}
+                    <span className="font-semibold text-foreground">
+                      {event.accountName}
+                    </span>
+                  </p>
+                )}
+                {event.accountNumber && (
+                  <p>
+                    <span className="text-muted-foreground">
+                      Account Number:
+                    </span>{" "}
+                    <span className="font-semibold text-foreground tracking-wide">
+                      {event.accountNumber}
+                    </span>
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className="rounded-xl border border-border bg-muted/30 p-4">
             <p className="text-xs uppercase text-muted-foreground tracking-wide mb-2">
               Payment Status Guide
