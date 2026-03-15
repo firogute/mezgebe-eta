@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum TicketStatus {
+  AVAILABLE
+  RESERVED
+  SOLD
+}
+
+enum ReservationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+model User {
+  id           String        @id @default(cuid())
+  username     String        @unique
+  password     String?       // Only required for ADMIN
+  role         Role          @default(USER)
+  reservations Reservation[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+}
+
+model EtaEvent {
+  id            String   @id @default(cuid())
+  eventCode     Int      @unique @default(autoincrement())
+  title         String
+  descriptionEn String
+  descriptionAm String?
+  ticketPrice   Float
+  totalTickets  Int
+  deadline      DateTime
+  image         String?
+  tickets       Ticket[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Ticket {
+  id            String       @id @default(cuid())
+  ticketNumber  String       @unique // Format: ETA-{eventId}-{number}
+  eventId       String
+  event         EtaEvent     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  reservationId String?
+  reservation   Reservation? @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+  status        TicketStatus @default(AVAILABLE)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+model Reservation {
+  id        String            @id @default(cuid())
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tickets   Ticket[]
+  expiresAt DateTime
+  status    ReservationStatus @default(PENDING)
+  payment   Payment?
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  reservationId String        @unique
+  reservation   Reservation   @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  method        String        // TELEBIRR, CBE, CBE_BIRR, etc.
+  proofUrl      String?       // Screenshot URL or Payment Link
+  status        PaymentStatus @default(PENDING)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}

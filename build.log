@@ -1,0 +1,35 @@
+
+> mezgebe-eta@0.1.0 build
+> next build
+
+▲ Next.js 16.1.6 (Turbopack)
+- Environments: .env
+
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+  Creating an optimized production build ...
+
+> Build error occurred
+Error: Turbopack build failed with 1 errors:
+./node_modules/@prisma/client/index-browser.js:1:16
+Module not found: Can't resolve '.prisma/client/index-browser'
+[0m[31m[1m>[22m[39m[90m 1 |[39m [36mconst[39m prisma [33m=[39m require([32m'.prisma/client/index-browser'[39m)
+ [90m   |[39m                [31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m[31m[1m^[22m[39m
+ [90m 2 |[39m
+ [90m 3 |[39m module[33m.[39mexports [33m=[39m prisma
+ [90m 4 |[39m[0m
+
+
+
+Import trace:
+  Client Component Browser:
+    ./node_modules/@prisma/client/index-browser.js [Client Component Browser]
+    ./src/lib/prisma.ts [Client Component Browser]
+    ./src/lib/actions/admin.ts [Client Component Browser]
+    ./src/app/admin/create-eta/page.tsx [Client Component Browser]
+    ./src/app/admin/create-eta/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+    at ./node_modules/ (prisma/client/index-browser.js:1:16)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
