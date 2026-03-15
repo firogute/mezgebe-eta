@@ -6,6 +6,15 @@ export type PaymentProofData = {
     verifiedPaid: boolean;
     provider?: string | null;
     statusText?: string | null;
+    payerName?: string | null;
+    payerAccount?: string | null;
+    creditedPartyName?: string | null;
+    creditedPartyAccount?: string | null;
+    verifiedAmount?: number | null;
+    verifiedCurrency?: string | null;
+    totalPaidAmount?: number | null;
+    serviceFee?: number | null;
+    paymentDate?: string | null;
     verifierReference?: string | null;
   };
 };

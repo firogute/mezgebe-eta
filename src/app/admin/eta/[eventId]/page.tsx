@@ -26,6 +26,11 @@ export default async function AdminEtaDetailPage({
                   username: true,
                 },
               },
+              tickets: {
+                select: {
+                  id: true,
+                },
+              },
               payment: {
                 select: {
                   status: true,

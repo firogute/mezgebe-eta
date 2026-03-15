@@ -11,7 +11,83 @@ type LeulVerificationOutput = {
   reference: string;
   provider: string | null;
   statusText: string | null;
+  amount: number | null;
+  currency: string | null;
+  totalPaidAmount: number | null;
+  serviceFee: number | null;
+  payerName: string | null;
+  payerAccount: string | null;
+  creditedPartyName: string | null;
+  creditedPartyAccount: string | null;
+  paymentDate: string | null;
   reason: string | null;
+};
+
+const COMMON_REFERENCE_KEYS = [
+  "reference",
+  "ref",
+  "txn",
+  "tx",
+  "trx",
+  "transaction",
+  "transactionId",
+  "transaction_id",
+  "txRef",
+  "tx_ref",
+  "receipt",
+  "receiptNumber",
+  "receipt_number",
+  "orderId",
+  "order_id",
+  "paymentId",
+  "payment_id",
+  "invoice",
+  "invoiceId",
+  "invoice_id",
+  "sessionId",
+  "session_id",
+  "rrn",
+  "transId",
+  "transactionNo",
+  "traceNo",
+  "outTradeNo",
+] as const;
+
+const METHOD_REFERENCE_KEYS: Record<string, string[]> = {
+  telebirr: ["outTradeNo", "merchantOrderNo", "prepayId"],
+  cbe: ["transId", "transactionNo", "traceNo", "rrn"],
+  cbebirr: ["transId", "transactionNo", "traceNo", "rrn"],
+  dashen: ["transactionReference", "transaction_ref", "rrn"],
+  abyssinia: ["transactionReference", "clientReference", "rrn"],
+  mpesa: ["CheckoutRequestID", "MpesaReceiptNumber", "MerchantRequestID"],
+};
+
+const IGNORED_PATH_SEGMENTS = new Set([
+  "pay",
+  "payment",
+  "payments",
+  "receipt",
+  "receipts",
+  "result",
+  "success",
+  "status",
+  "verify",
+  "checkout",
+  "transaction",
+  "transactions",
+  "app",
+  "mobile",
+  "web",
+  "portal",
+]);
+
+const LEUL_ENDPOINT_BY_METHOD: Record<string, string> = {
+  telebirr: "/verify-telebirr",
+  cbe: "/verify-cbe",
+  cbebirr: "/verify-cbebirr",
+  dashen: "/verify-dashen",
+  abyssinia: "/verify-abyssinia",
+  mpesa: "/verify-mpesa",
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -51,6 +127,37 @@ function readBooleanField(record: Record<string, unknown>, keys: string[]) {
   return null;
 }
 
+function parseNumericValue(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.replace(/[^0-9.-]/g, "").trim();
+    if (!normalized) {
+      return null;
+    }
+
+    const parsed = Number(normalized);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
+function readNumberField(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const parsed = parseNumericValue(record[key]);
+    if (typeof parsed === "number") {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
 function normalizeStatusToPaid(status: string | null) {
   if (!status) {
     return null;
@@ -74,24 +181,93 @@ function normalizeStatusToPaid(status: string | null) {
   return null;
 }
 
-function extractVerificationPayload(link: string): VerificationPayload | null {
+function normalizeReferenceCandidate(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = value.trim().replace(/[\s/]+/g, "");
+  if (normalized.length < 6) {
+    return null;
+  }
+
+  return normalized;
+}
+
+function getSearchParamValue(url: URL, keys: readonly string[]) {
+  for (const key of keys) {
+    const value = normalizeReferenceCandidate(url.searchParams.get(key));
+    if (value) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+function getHashParamValue(url: URL, keys: readonly string[]) {
+  const hash = url.hash.startsWith("#") ? url.hash.slice(1) : url.hash;
+  if (!hash || !hash.includes("=")) {
+    return null;
+  }
+
+  const hashParams = new URLSearchParams(hash);
+  for (const key of keys) {
+    const value = normalizeReferenceCandidate(hashParams.get(key));
+    if (value) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+function getPathReference(url: URL) {
+  const segments = url.pathname
+    .split("/")
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+  for (let index = segments.length - 1; index >= 0; index -= 1) {
+    const segment = segments[index];
+    const lowerSegment = segment.toLowerCase();
+
+    if (IGNORED_PATH_SEGMENTS.has(lowerSegment)) {
+      continue;
+    }
+
+    const directCandidate = normalizeReferenceCandidate(segment);
+    if (directCandidate) {
+      return directCandidate;
+    }
+
+    const tokenCandidate = segment
+      .split(/[^a-zA-Z0-9_-]+/)
+      .map((token) => normalizeReferenceCandidate(token))
+      .find((token): token is string => Boolean(token));
+
+    if (tokenCandidate) {
+      return tokenCandidate;
+    }
+  }
+
+  return null;
+}
+
+function extractVerificationPayload(
+  link: string,
+  paymentMethod?: string,
+): VerificationPayload | null {
   try {
     const url = new URL(link);
+    const normalizedMethod = normalizeMethodKey(paymentMethod);
+    const methodKeys = METHOD_REFERENCE_KEYS[normalizedMethod] || [];
+    const allKeys = [...methodKeys, ...COMMON_REFERENCE_KEYS];
 
-    const refFromParams =
-      url.searchParams.get("reference") ||
-      url.searchParams.get("ref") ||
-      url.searchParams.get("txn") ||
-      url.searchParams.get("tx") ||
-      url.searchParams.get("transaction") ||
-      url.searchParams.get("transactionId") ||
-      url.searchParams.get("receipt") ||
-      url.searchParams.get("receiptNumber");
-
-    const pathSegments = url.pathname.split("/").filter(Boolean);
-    const lastPathSegment = pathSegments[pathSegments.length - 1] || "";
-
-    const reference = (refFromParams || lastPathSegment || "").trim();
+    const reference =
+      getSearchParamValue(url, allKeys) ||
+      getHashParamValue(url, allKeys) ||
+      getPathReference(url);
     if (!reference) {
       return null;
     }
@@ -116,31 +292,66 @@ function extractVerificationPayload(link: string): VerificationPayload | null {
   }
 }
 
-export function extractLeulReference(link: string) {
-  return extractVerificationPayload(link)?.reference || null;
+export function extractLeulReference(link: string, paymentMethod?: string) {
+  return extractVerificationPayload(link, paymentMethod)?.reference || null;
+}
+
+function normalizeMethodKey(paymentMethod: string | undefined) {
+  if (!paymentMethod) {
+    return "";
+  }
+
+  return paymentMethod.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function getLeulVerifyEndpoint(paymentMethod: string | undefined) {
+  const normalizedMethod = normalizeMethodKey(paymentMethod);
+
+  return LEUL_ENDPOINT_BY_METHOD[normalizedMethod] || "/verify";
 }
 
 export async function verifyPaymentLinkWithLeul(
   paymentLink: string,
+  paymentMethod?: string,
 ): Promise<LeulVerificationOutput> {
-  const payload = extractVerificationPayload(paymentLink);
+  const payload = extractVerificationPayload(paymentLink, paymentMethod);
   if (!payload) {
     return {
       paid: false,
       reference: "",
       provider: null,
       statusText: null,
+      amount: null,
+      currency: null,
+      totalPaidAmount: null,
+      serviceFee: null,
+      payerName: null,
+      payerAccount: null,
+      creditedPartyName: null,
+      creditedPartyAccount: null,
+      paymentDate: null,
       reason: "Invalid payment link. Could not extract payment reference.",
     };
   }
 
-  const apiKey = process.env.LEUL_VERIFY_API_KEY;
+  const apiKey =
+    process.env.LEUL_VERIFY_API_KEY?.trim() ||
+    process.env.VERIFY_API_KEY?.trim();
   if (!apiKey) {
     return {
       paid: false,
       reference: payload.reference,
       provider: null,
       statusText: null,
+      amount: null,
+      currency: null,
+      totalPaidAmount: null,
+      serviceFee: null,
+      payerName: null,
+      payerAccount: null,
+      creditedPartyName: null,
+      creditedPartyAccount: null,
+      paymentDate: null,
       reason:
         "Payment verification is not configured. Add LEUL_VERIFY_API_KEY in environment.",
     };
@@ -148,9 +359,10 @@ export async function verifyPaymentLinkWithLeul(
 
   const baseUrl =
     process.env.LEUL_VERIFY_BASE_URL?.trim() || DEFAULT_LEUL_VERIFY_BASE_URL;
+  const endpoint = getLeulVerifyEndpoint(paymentMethod);
 
   try {
-    const response = await fetch(`${baseUrl}/verify`, {
+    const response = await fetch(`${baseUrl}${endpoint}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -169,6 +381,61 @@ export async function verifyPaymentLinkWithLeul(
       "status",
       "paymentStatus",
       "state",
+      "transactionStatus",
+    ]);
+    const amount =
+      readNumberField(data, [
+        "settledAmount",
+        "amount",
+        "paidAmount",
+        "paymentAmount",
+        "totalAmount",
+        "total",
+        "value",
+        "totalPaidAmount",
+      ]) ??
+      readNumberField(root, [
+        "settledAmount",
+        "amount",
+        "paidAmount",
+        "paymentAmount",
+        "totalAmount",
+        "total",
+        "value",
+        "totalPaidAmount",
+      ]);
+    const totalPaidAmount =
+      readNumberField(data, ["totalPaidAmount", "grossAmount"]) ??
+      readNumberField(root, ["totalPaidAmount", "grossAmount"]);
+    const serviceFee =
+      readNumberField(data, ["serviceFee", "fee", "transactionFee"]) ??
+      readNumberField(root, ["serviceFee", "fee", "transactionFee"]);
+    const currency =
+      readStringField(data, ["currency", "currencyCode"]) ||
+      readStringField(root, ["currency", "currencyCode"]);
+    const payerName = readStringField(data, ["payerName", "customerName"]);
+    const payerAccount = readStringField(data, [
+      "payerTelebirrNo",
+      "payerAccountNo",
+      "payerAccount",
+      "phoneNumber",
+      "msisdn",
+    ]);
+    const creditedPartyName = readStringField(data, [
+      "creditedPartyName",
+      "merchantName",
+      "receiverName",
+    ]);
+    const creditedPartyAccount = readStringField(data, [
+      "creditedPartyAccountNo",
+      "merchantAccountNo",
+      "receiverAccountNo",
+    ]);
+    const paymentDate = readStringField(data, [
+      "paymentDate",
+      "paidAt",
+      "transactionDate",
+      "date",
     ]);
 
     const boolHint =
@@ -196,8 +463,17 @@ export async function verifyPaymentLinkWithLeul(
     return {
       paid,
       reference: payload.reference,
-      provider,
+      provider: provider || paymentMethod || null,
       statusText,
+      amount,
+      currency,
+      totalPaidAmount,
+      serviceFee,
+      payerName,
+      payerAccount,
+      creditedPartyName,
+      creditedPartyAccount,
+      paymentDate,
       reason: paid ? null : reason || "Payment is not verified as paid.",
     };
   } catch (error) {
@@ -207,6 +483,15 @@ export async function verifyPaymentLinkWithLeul(
       reference: payload.reference,
       provider: null,
       statusText: null,
+      amount: null,
+      currency: null,
+      totalPaidAmount: null,
+      serviceFee: null,
+      payerName: null,
+      payerAccount: null,
+      creditedPartyName: null,
+      creditedPartyAccount: null,
+      paymentDate: null,
       reason: "Could not reach payment verifier service.",
     };
   }
@@ -314,8 +599,11 @@ function parseVerificationResponse(data: unknown): VerifyResult {
 
 export async function verifyLeulPaymentReference(input: {
   referenceRaw: string;
+  paymentMethod?: string;
 }) {
-  const apiKey = process.env.LEUL_VERIFY_API_KEY || process.env.VERIFY_API_KEY;
+  const apiKey =
+    process.env.LEUL_VERIFY_API_KEY?.trim() ||
+    process.env.VERIFY_API_KEY?.trim();
   if (!apiKey) {
     return {
       ok: false,
@@ -335,7 +623,8 @@ export async function verifyLeulPaymentReference(input: {
   }
 
   try {
-    const response = await fetch(`${VERIFY_BASE_URL}/verify`, {
+    const endpoint = getLeulVerifyEndpoint(input.paymentMethod);
+    const response = await fetch(`${VERIFY_BASE_URL}${endpoint}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

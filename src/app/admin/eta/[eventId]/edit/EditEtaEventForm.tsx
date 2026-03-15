@@ -5,6 +5,18 @@ import { useRouter } from "next/navigation";
 import { updateEtaEventAdmin } from "@/lib/actions/admin";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 
+const BANK_TYPE_OPTIONS = [
+  "Telebirr",
+  "CBE",
+  "CBE Birr",
+  "Dashen Bank",
+  "Bank of Abyssinia",
+  "Awash Bank",
+  "M-Pesa",
+  "Amole",
+  "Other",
+];
+
 type EditEtaEventFormProps = {
   eventId: string;
   initialTitle: string;
@@ -37,6 +49,10 @@ export default function EditEtaEventForm(props: EditEtaEventFormProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
+  const normalizedBankType = bankType.trim();
+  const shouldShowCustomBankTypeOption =
+    normalizedBankType.length > 0 &&
+    !BANK_TYPE_OPTIONS.includes(normalizedBankType);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -131,13 +147,21 @@ export default function EditEtaEventForm(props: EditEtaEventFormProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Bank Type</label>
-            <input
+            <select
               value={bankType}
               onChange={(e) => setBankType(e.target.value)}
               required
               className="w-full p-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
-              placeholder="e.g. Telebirr, CBE"
-            />
+            >
+              {shouldShowCustomBankTypeOption && (
+                <option value={normalizedBankType}>{normalizedBankType}</option>
+              )}
+              {BANK_TYPE_OPTIONS.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">

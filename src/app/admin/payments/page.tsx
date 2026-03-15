@@ -2,8 +2,43 @@ import prisma from "@/lib/prisma";
 import { PaymentApprovalButtons } from "./components/PaymentApprovalButtons";
 import { parsePaymentProof } from "@/lib/paymentProof";
 import { ReceiptImageViewer } from "./components/ReceiptImageViewer";
+import { ReferenceLinkPreview } from "./components/ReferenceLinkPreview";
 
 export const dynamic = "force-dynamic";
+
+function formatMoney(
+  amount: number | null | undefined,
+  currency?: string | null,
+) {
+  if (typeof amount !== "number") {
+    return null;
+  }
+
+  return `${amount.toLocaleString()} ${currency || "Birr"}`;
+}
+
+function extractPaidTime(paymentDate: string | null | undefined) {
+  if (!paymentDate) {
+    return null;
+  }
+
+  const trimmed = paymentDate.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const parts = trimmed.split(/\s+/);
+  if (parts.length >= 2) {
+    return parts.slice(1).join(" ");
+  }
+
+  const isoDate = new Date(trimmed);
+  if (!Number.isNaN(isoDate.getTime())) {
+    return isoDate.toLocaleTimeString();
+  }
+
+  return null;
+}
 
 export default async function PaymentsPage() {
   const pendingPayments = await prisma.payment.findMany({
@@ -34,6 +69,7 @@ export default async function PaymentsPage() {
           {pendingPayments.map((payment) =>
             (() => {
               const parsedProof = parsePaymentProof(payment.proofUrl);
+              const paidTime = extractPaidTime(parsedProof.verifier?.paymentDate);
 
               return (
                 <div
@@ -67,6 +103,128 @@ export default async function PaymentsPage() {
                     </p>
                   </div>
 
+                  <div className="mb-6 rounded-xl border border-border bg-muted/30 p-4">
+                    <p className="mb-3 text-sm font-medium text-foreground">
+                      Leul Verification
+                    </p>
+
+                    {parsedProof.verifier?.verifiedPaid ? (
+                      <div className="space-y-2 text-sm">
+                        <p className="font-medium text-green-700">Verified</p>
+                        <p>
+                          <span className="text-muted-foreground">
+                            Provider:
+                          </span>{" "}
+                          {parsedProof.verifier.provider || "Leul"}
+                        </p>
+                        <p>
+                          <span className="text-muted-foreground">Status:</span>{" "}
+                          {parsedProof.verifier.statusText || "Verified"}
+                        </p>
+                        {parsedProof.verifier.payerName && (
+                          <p>
+                            <span className="text-muted-foreground">
+                              Payer Name:
+                            </span>{" "}
+                            {parsedProof.verifier.payerName}
+                          </p>
+                        )}
+                        {parsedProof.verifier.payerAccount && (
+                          <p>
+                            <span className="text-muted-foreground">
+                              Payer Account:
+                            </span>{" "}
+                            {parsedProof.verifier.payerAccount}
+                          </p>
+                        )}
+                        {parsedProof.verifier.creditedPartyName && (
+                          <p>
+                            <span className="text-muted-foreground">
+                              Receiver:
+                            </span>{" "}
+                            {parsedProof.verifier.creditedPartyName}
+                          </p>
+                        )}
+                        {parsedProof.verifier.creditedPartyAccount && (
+                          <p>
+                            <span className="text-muted-foreground">
+                              Receiver Account:
+                            </span>{" "}
+                            {parsedProof.verifier.creditedPartyAccount}
+                          </p>
+                        )}
+                        {formatMoney(
+                          parsedProof.verifier.verifiedAmount,
+                          parsedProof.verifier.verifiedCurrency,
+                        ) && (
+                          <p>
+                            <span className="text-muted-foreground">
+                              Settled Amount:
+                            </span>{" "}
+                            {formatMoney(
+                              parsedProof.verifier.verifiedAmount,
+                              parsedProof.verifier.verifiedCurrency,
+                            )}
+                          </p>
+                        )}
+                        {formatMoney(
+                          parsedProof.verifier.serviceFee,
+                          parsedProof.verifier.verifiedCurrency,
+                        ) && (
+                          <p>
+                            <span className="text-muted-foreground">
+                              Service Fee:
+                            </span>{" "}
+                            {formatMoney(
+                              parsedProof.verifier.serviceFee,
+                              parsedProof.verifier.verifiedCurrency,
+                            )}
+                          </p>
+                        )}
+                        {formatMoney(
+                          parsedProof.verifier.totalPaidAmount,
+                          parsedProof.verifier.verifiedCurrency,
+                        ) && (
+                          <p>
+                            <span className="text-muted-foreground">
+                              Total Paid:
+                            </span>{" "}
+                            {formatMoney(
+                              parsedProof.verifier.totalPaidAmount,
+                              parsedProof.verifier.verifiedCurrency,
+                            )}
+                          </p>
+                        )}
+                        {parsedProof.verifier.paymentDate && (
+                          <p>
+                            <span className="text-muted-foreground">
+                              Payment Date:
+                            </span>{" "}
+                            {parsedProof.verifier.paymentDate}
+                          </p>
+                        )}
+                        <p>
+                          <span className="text-muted-foreground">
+                            Time Paid:
+                          </span>{" "}
+                          {paidTime || "Not available for this saved payment"}
+                        </p>
+                        {parsedProof.verifier.verifierReference && (
+                          <p>
+                            <span className="text-muted-foreground">
+                              Reference:
+                            </span>{" "}
+                            {parsedProof.verifier.verifierReference}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm font-medium text-red-600">
+                        X Not Verified
+                      </p>
+                    )}
+                  </div>
+
                   {(parsedProof.receiptImageUrl ||
                     parsedProof.referenceLink) && (
                     <div className="mb-6">
@@ -86,14 +244,9 @@ export default async function PaymentsPage() {
                           <p className="text-sm font-medium mb-2">
                             Bank/Reference Link:
                           </p>
-                          <a
-                            href={parsedProof.referenceLink}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-primary hover:underline break-all text-sm"
-                          >
-                            {parsedProof.referenceLink}
-                          </a>
+                          <ReferenceLinkPreview
+                            referenceLink={parsedProof.referenceLink}
+                          />
                         </div>
                       )}
                     </div>
