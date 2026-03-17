@@ -19,7 +19,7 @@ const adapter = new PrismaNeon(pool);
 
 const prismaClientSingleton = () => {
   try {
-    return new PrismaClient({ adapter });
+    return new PrismaClient({ adapter } as any);
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     const adapterUnsupported = message.includes(
