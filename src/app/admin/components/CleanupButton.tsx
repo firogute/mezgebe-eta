@@ -26,7 +26,9 @@ export function CleanupButton() {
         alert("Cleanup failed: " + result.error);
       }
     } catch (error) {
-      alert("Error running cleanup: " + error.message);
+      const message =
+        error instanceof Error ? error.message : "Unknown cleanup error";
+      alert("Error running cleanup: " + message);
     } finally {
       setLoading(false);
     }

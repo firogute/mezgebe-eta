@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { releaseExpiredReservations } from "@/lib/actions/reservation";
-import { auth } from "@/lib/actions/auth";
 
 export async function POST(request: NextRequest) {
   try {
-    // Check if user is admin
-    const authResult = await auth();
-    if (!authResult.success || authResult.user?.role !== "ADMIN") {
+    // Check if user is admin via the same cookie used by admin middleware.
+    const adminToken = request.cookies.get("admin_token")?.value;
+    if (adminToken !== "authenticated") {
       return NextResponse.json(
         { error: "Unauthorized - Admin access required" },
         { status: 403 },

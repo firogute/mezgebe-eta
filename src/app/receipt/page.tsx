@@ -229,13 +229,13 @@ export default async function ReceiptPage({
                       Username
                     </p>
                     <p className="text-sm font-semibold text-foreground mt-1">
-                      @{user.username}
+                      @{user?.username || username}
                     </p>
                     <p className="mt-3 text-xs text-muted-foreground uppercase tracking-wide">
                       Phone
                     </p>
                     <p className="text-sm font-semibold text-foreground mt-1">
-                      {user.phone || "Not available"}
+                      {user?.phone || "Not available"}
                     </p>
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">
                       Total Amount
