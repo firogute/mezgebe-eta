@@ -5,6 +5,8 @@ import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { getTicketTemplateConfig } from "@/lib/ticketTemplate";
 import { VerifiedTicketDownload } from "@/components/tickets/VerifiedTicketDownload";
 import { PhoneNumberForm } from "./PhoneNumberForm";
+import { parsePaymentProof } from "@/lib/paymentProof";
+import { LeulVerificationDetails } from "@/components/payments/LeulVerificationDetails";
 
 export const dynamic = "force-dynamic";
 
@@ -140,6 +142,9 @@ export default async function ReceiptPage({
 
         <div className="space-y-4">
           {reservations.map((res) => {
+            const paymentProof = res.payment
+              ? parsePaymentProof(res.payment.proofUrl)
+              : null;
             const totalAmount =
               res.tickets.length * (res.tickets[0]?.event?.ticketPrice || 0);
             const statusLabel =
@@ -245,6 +250,12 @@ export default async function ReceiptPage({
                     </p>
                   </div>
                 </div>
+
+                {paymentProof?.verifier && (
+                  <div className="mt-4">
+                    <LeulVerificationDetails verifier={paymentProof.verifier} />
+                  </div>
+                )}
 
                 {res.status === "APPROVED" &&
                   res.payment?.status === "VERIFIED" && (

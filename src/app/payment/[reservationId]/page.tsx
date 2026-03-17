@@ -6,6 +6,8 @@ import { ArrowLeft } from "lucide-react";
 import { CountdownText } from "@/components/ui/CountdownText";
 import { VerifiedTicketDownload } from "@/components/tickets/VerifiedTicketDownload";
 import { getTicketTemplateConfig } from "@/lib/ticketTemplate";
+import { parsePaymentProof } from "@/lib/paymentProof";
+import { LeulVerificationDetails } from "@/components/payments/LeulVerificationDetails";
 
 export default async function PaymentPage({
   params,
@@ -45,6 +47,9 @@ export default async function PaymentPage({
 
   const ticketCount = reservation.tickets.length;
   const totalPrice = ticketCount * event.ticketPrice;
+  const paymentProof = reservation.payment
+    ? parsePaymentProof(reservation.payment.proofUrl)
+    : null;
 
   if (
     reservation.status === "APPROVED" &&
@@ -97,6 +102,12 @@ export default async function PaymentPage({
               </p>
             </div>
           </div>
+
+          {paymentProof?.verifier && (
+            <div className="mt-4">
+              <LeulVerificationDetails verifier={paymentProof.verifier} />
+            </div>
+          )}
 
           <div className="mt-6">
             <VerifiedTicketDownload
@@ -242,6 +253,12 @@ export default async function PaymentPage({
               </p>
             </div>
           </div>
+
+          {paymentProof?.verifier && (
+            <div className="mt-6">
+              <LeulVerificationDetails verifier={paymentProof.verifier} />
+            </div>
+          )}
         </section>
 
         <section className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-sm">

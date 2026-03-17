@@ -63,6 +63,29 @@ function extractPaidTime(paymentDate: string | null | undefined) {
   return null;
 }
 
+function maskAccount(value: string | null | undefined) {
+  const normalized = value?.trim();
+  if (!normalized) {
+    return "-";
+  }
+
+  // Preserve already-masked values from verifier responses.
+  if (normalized.includes("*")) {
+    return normalized;
+  }
+
+  const compact = normalized.replace(/\s+/g, "");
+  if (compact.length <= 4) {
+    return compact;
+  }
+
+  if (compact.length <= 8) {
+    return `${compact.slice(0, 2)}****${compact.slice(-2)}`;
+  }
+
+  return `${compact.slice(0, 4)}****${compact.slice(-4)}`;
+}
+
 function LeulDetails({
   verifier,
 }: {
@@ -123,7 +146,7 @@ function LeulDetails({
         {verifier.payerAccount && (
           <p>
             <span className="text-muted-foreground">Payer Account:</span>{" "}
-            {verifier.payerAccount}
+            {maskAccount(verifier.payerAccount)}
           </p>
         )}
         {verifier.creditedPartyName && (
@@ -135,7 +158,7 @@ function LeulDetails({
         {verifier.creditedPartyAccount && (
           <p>
             <span className="text-muted-foreground">Receiver Account:</span>{" "}
-            {verifier.creditedPartyAccount}
+            {maskAccount(verifier.creditedPartyAccount)}
           </p>
         )}
         {formatMoney(verifier.verifiedAmount, verifier.verifiedCurrency) && (
