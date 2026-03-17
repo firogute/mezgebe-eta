@@ -177,13 +177,13 @@ export default function PaymentForm({
       return;
     }
 
-    if (uploading) {
-      setError("Please wait for the receipt upload to finish.");
+    if (!referenceLink.trim()) {
+      setError("Please provide the transaction reference link.");
       return;
     }
 
-    if (!receiptImageUrl) {
-      setError("Please upload your payment receipt image first.");
+    if (uploading) {
+      setError("Please wait for the receipt upload to finish.");
       return;
     }
 
@@ -193,8 +193,8 @@ export default function PaymentForm({
     const res = await submitPayment({
       reservationId,
       method,
-      receiptImageUrl,
-      referenceLink: referenceLink || undefined,
+      receiptImageUrl: receiptImageUrl || undefined,
+      referenceLink,
     });
     if (res.success) {
       showToast("Payment submitted successfully.", "success");

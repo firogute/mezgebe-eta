@@ -1,6 +1,6 @@
 export type PaymentProofData = {
   receiptImageUrl?: string;
-  referenceLink?: string;
+  referenceLink: string;
   verifier?: {
     source: "leul";
     verifiedPaid: boolean;
@@ -32,7 +32,7 @@ export function serializePaymentProof(data: PaymentProofData) {
 
 export function parsePaymentProof(rawProofUrl: string | null) {
   if (!rawProofUrl) {
-    return { receiptImageUrl: null, referenceLink: null, verifier: null };
+    return { receiptImageUrl: null, referenceLink: "", verifier: null };
   }
 
   try {
@@ -44,7 +44,7 @@ export function parsePaymentProof(rawProofUrl: string | null) {
 
     return {
       receiptImageUrl: parsed.receiptImageUrl || null,
-      referenceLink: parsed.referenceLink || null,
+      referenceLink: parsed.referenceLink || "",
       verifier: parsed.verifier || null,
     };
   } catch {
@@ -55,7 +55,7 @@ export function parsePaymentProof(rawProofUrl: string | null) {
 
     return {
       receiptImageUrl: isImageLink ? rawProofUrl : null,
-      referenceLink: isImageLink ? null : rawProofUrl,
+      referenceLink: isImageLink ? "" : rawProofUrl,
       verifier: null,
     };
   }

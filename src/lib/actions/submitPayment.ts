@@ -30,8 +30,8 @@ function shouldFallbackToManualReview(reason: string | null) {
 export async function submitPayment(data: {
   reservationId: string;
   method: string;
-  receiptImageUrl: string;
-  referenceLink?: string;
+  receiptImageUrl?: string;
+  referenceLink: string;
 }) {
   try {
     const reservation = await prisma.reservation.findUnique({
@@ -92,94 +92,100 @@ export async function submitPayment(data: {
         }
       | undefined;
 
-    const trimmedReferenceLink = data.referenceLink?.trim();
-    if (trimmedReferenceLink) {
-      const verification = await verifyPaymentLinkWithLeul(
-        trimmedReferenceLink,
-        data.method,
-      );
-      if (!verification.paid) {
-        if (shouldFallbackToManualReview(verification.reason)) {
-          console.warn(
-            "Payment verifier unavailable during submission; falling back to manual review.",
-            verification.reason,
-          );
-        } else {
-          return {
-            success: false,
-            error:
-              verification.reason ||
-              "Payment link verification failed. Please check your link.",
-          };
-        }
-      }
+    const trimmedReferenceLink = data.referenceLink.trim();
+    if (!trimmedReferenceLink) {
+      return {
+        success: false,
+        error: "Transaction reference link is required.",
+      };
+    }
 
-      if (verification.paid) {
-        if (expectedAmount === null) {
-          return {
-            success: false,
-            error:
-              "Could not calculate the expected ticket total for verification.",
-          };
-        }
+    const verification = await verifyPaymentLinkWithLeul(
+      trimmedReferenceLink,
+      data.method,
+    );
 
-        if (verification.amount === null) {
-          return {
-            success: false,
-            error:
-              "Payment was found, but the verifier did not return the paid amount. Please use a link that includes the payment amount or ask admin to review it manually.",
-          };
-        }
-
-        const verifiedAmount = roundCurrency(verification.amount);
-        if (verifiedAmount !== expectedAmount) {
-          return {
-            success: false,
-            error: `Paid amount mismatch. Expected ${formatBirr(expectedAmount)}, but verifier returned ${formatBirr(verifiedAmount)}.`,
-          };
-        }
-
-        const reference =
-          verification.reference ||
-          extractLeulReference(trimmedReferenceLink, data.method);
-        if (reference) {
-          const duplicateReference = await prisma.payment.findFirst({
-            where: {
-              reservationId: { not: data.reservationId },
-              status: { in: ["PENDING", "VERIFIED"] },
-              proofUrl: {
-                contains: `\"verifierReference\":\"${reference}\"`,
-              },
-            },
-            select: { id: true },
-          });
-
-          if (duplicateReference) {
-            return {
-              success: false,
-              error:
-                "This payment reference was already used for another ticket purchase.",
-            };
-          }
-        }
-
-        verifierProof = {
-          source: "leul",
-          verifiedPaid: true,
-          provider: verification.provider,
-          statusText: verification.statusText,
-          payerName: verification.payerName,
-          payerAccount: verification.payerAccount,
-          creditedPartyName: verification.creditedPartyName,
-          creditedPartyAccount: verification.creditedPartyAccount,
-          verifiedAmount: verifiedAmount,
-          verifiedCurrency: verification.currency,
-          totalPaidAmount: verification.totalPaidAmount,
-          serviceFee: verification.serviceFee,
-          paymentDate: verification.paymentDate,
-          verifierReference: reference,
+    if (!verification.paid) {
+      if (shouldFallbackToManualReview(verification.reason)) {
+        console.warn(
+          "Payment verifier unavailable during submission; falling back to manual review.",
+          verification.reason,
+        );
+      } else {
+        return {
+          success: false,
+          error:
+            verification.reason ||
+            "Payment link verification failed. Please check your link.",
         };
       }
+    }
+
+    if (verification.paid) {
+      if (expectedAmount === null) {
+        return {
+          success: false,
+          error:
+            "Could not calculate the expected ticket total for verification.",
+        };
+      }
+
+      if (verification.amount === null) {
+        return {
+          success: false,
+          error:
+            "Payment was found, but the verifier did not return the paid amount. Please use a link that includes the payment amount or ask admin to review it manually.",
+        };
+      }
+
+      const verifiedAmount = roundCurrency(verification.amount);
+      if (verifiedAmount !== expectedAmount) {
+        return {
+          success: false,
+          error: `Paid amount mismatch. Expected ${formatBirr(expectedAmount)}, but verifier returned ${formatBirr(verifiedAmount)}.`,
+        };
+      }
+
+      const reference =
+        verification.reference ||
+        extractLeulReference(trimmedReferenceLink, data.method);
+      if (reference) {
+        const duplicateReference = await prisma.payment.findFirst({
+          where: {
+            reservationId: { not: data.reservationId },
+            status: { in: ["PENDING", "VERIFIED"] },
+            proofUrl: {
+              contains: `\"verifierReference\":\"${reference}\"`,
+            },
+          },
+          select: { id: true },
+        });
+
+        if (duplicateReference) {
+          return {
+            success: false,
+            error:
+              "This payment reference was already used for another ticket purchase.",
+          };
+        }
+      }
+
+      verifierProof = {
+        source: "leul",
+        verifiedPaid: true,
+        provider: verification.provider,
+        statusText: verification.statusText,
+        payerName: verification.payerName,
+        payerAccount: verification.payerAccount,
+        creditedPartyName: verification.creditedPartyName,
+        creditedPartyAccount: verification.creditedPartyAccount,
+        verifiedAmount: verifiedAmount,
+        verifiedCurrency: verification.currency,
+        totalPaidAmount: verification.totalPaidAmount,
+        serviceFee: verification.serviceFee,
+        paymentDate: verification.paymentDate,
+        verifierReference: reference,
+      };
     }
 
     await prisma.payment.create({
