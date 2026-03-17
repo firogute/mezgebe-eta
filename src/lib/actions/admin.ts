@@ -149,7 +149,7 @@ export async function deleteEtaEventAdmin(data: { eventId: string }) {
       where: { id: data.eventId },
       include: {
         tickets: {
-          select: { status: true },
+          select: { id: true, reservationId: true, status: true },
         },
       },
     });
@@ -158,26 +158,37 @@ export async function deleteEtaEventAdmin(data: { eventId: string }) {
       return { success: false, error: "ETA event not found." };
     }
 
-    const hasActiveTicketUsage = event.tickets.some(
-      (ticket) => ticket.status !== "AVAILABLE",
+    const reservationIds = Array.from(
+      new Set(
+        event.tickets
+          .map((ticket) => ticket.reservationId)
+          .filter((value): value is string => Boolean(value)),
+      ),
     );
-    if (hasActiveTicketUsage) {
-      return {
-        success: false,
-        error:
-          "Cannot delete this ETA because some tickets are already reserved or sold.",
-      };
-    }
 
-    await prisma.etaEvent.delete({ where: { id: data.eventId } });
+    await prisma.$transaction(async (tx) => {
+      if (reservationIds.length > 0) {
+        await tx.payment.deleteMany({
+          where: { reservationId: { in: reservationIds } },
+        });
+
+        await tx.reservation.deleteMany({
+          where: { id: { in: reservationIds } },
+        });
+      }
+
+      await tx.etaEvent.delete({ where: { id: data.eventId } });
+    });
 
     await createAdminNotification({
       title: "Event Deleted",
-      message: `${event.title} was deleted.`,
+      message: `${event.title} was deleted with all related tickets and payment records.`,
       link: "/admin",
     });
 
     revalidatePath("/admin");
+    revalidatePath("/admin/payments");
+    revalidatePath("/receipt");
     revalidatePath("/");
     return { success: true };
   } catch (error) {

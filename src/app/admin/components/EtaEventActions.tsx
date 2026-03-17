@@ -69,7 +69,7 @@ export function EtaEventActions({
 
   function handleDelete() {
     const confirmed = window.confirm(
-      "Delete this ETA event? This is blocked if tickets are already reserved/sold.",
+      "Delete this ETA event permanently? This will remove related tickets, reservations, and payment records.",
     );
     if (!confirmed) {
       return;
