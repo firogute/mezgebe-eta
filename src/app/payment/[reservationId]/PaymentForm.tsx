@@ -350,7 +350,7 @@ export default function PaymentForm({
 
       <div>
         <label className="block text-sm font-medium mb-1">
-          Bank/Reference Link (Optional)
+          Bank/Reference Link
         </label>
         <p className="text-xs text-muted-foreground mb-3">
           If your bank/app gives a payment link or transaction URL, add it here.
