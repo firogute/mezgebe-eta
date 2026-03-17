@@ -1,4 +1,4 @@
-import prisma from '../prisma';
+import prisma from "../prisma";
 
 /**
  * Automatically removes unpaid reservations and makes their tickets available again.
@@ -16,34 +16,36 @@ export async function releaseExpiredReservations() {
   // 1. Handle PENDING reservations that have expired (24+ hours)
   const expiredPendingReservations = await prisma.reservation.findMany({
     where: {
-      status: 'PENDING',
+      status: "PENDING",
       expiresAt: {
-        lt: now
-      }
+        lt: now,
+      },
     },
-    select: { id: true, tickets: { select: { id: true } } }
+    select: { id: true, tickets: { select: { id: true } } },
   });
 
   if (expiredPendingReservations.length > 0) {
-    const reservationIds = expiredPendingReservations.map(r => r.id);
-    const ticketIds = expiredPendingReservations.flatMap(r => r.tickets.map(t => t.id));
+    const reservationIds = expiredPendingReservations.map((r) => r.id);
+    const ticketIds = expiredPendingReservations.flatMap((r) =>
+      r.tickets.map((t) => t.id),
+    );
 
     // Update tickets to AVAILABLE and remove reservation connection
     await prisma.ticket.updateMany({
       where: {
-        id: { in: ticketIds }
+        id: { in: ticketIds },
       },
       data: {
-        status: 'AVAILABLE',
-        reservationId: null
-      }
+        status: "AVAILABLE",
+        reservationId: null,
+      },
     });
 
     // Delete the expired pending reservations
     await prisma.reservation.deleteMany({
       where: {
-        id: { in: reservationIds }
-      }
+        id: { in: reservationIds },
+      },
     });
 
     totalReleased = reservationIds.length;
@@ -52,22 +54,22 @@ export async function releaseExpiredReservations() {
   // 2. Clean up old EXPIRED reservations (7+ days old)
   const oldExpiredReservations = await prisma.reservation.findMany({
     where: {
-      status: 'EXPIRED',
+      status: "EXPIRED",
       updatedAt: {
-        lt: sevenDaysAgo
-      }
+        lt: sevenDaysAgo,
+      },
     },
-    select: { id: true }
+    select: { id: true },
   });
 
   if (oldExpiredReservations.length > 0) {
-    const oldReservationIds = oldExpiredReservations.map(r => r.id);
+    const oldReservationIds = oldExpiredReservations.map((r) => r.id);
 
     // Delete old expired reservations
     await prisma.reservation.deleteMany({
       where: {
-        id: { in: oldReservationIds }
-      }
+        id: { in: oldReservationIds },
+      },
     });
 
     totalCleaned = oldReservationIds.length;
@@ -76,6 +78,6 @@ export async function releaseExpiredReservations() {
   return {
     releasedCount: totalReleased,
     cleanedCount: totalCleaned,
-    totalProcessed: totalReleased + totalCleaned
+    totalProcessed: totalReleased + totalCleaned,
   };
 }

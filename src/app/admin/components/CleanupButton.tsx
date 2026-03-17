@@ -10,21 +10,23 @@ export function CleanupButton() {
 
     setLoading(true);
     try {
-      const response = await fetch('/api/cleanup', {
-        method: 'POST',
+      const response = await fetch("/api/cleanup", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       });
       const result = await response.json();
       if (result.success) {
-        alert(`Cleanup completed! Released ${result.data.releasedCount} expired reservations and cleaned ${result.data.cleanedCount} old records.`);
+        alert(
+          `Cleanup completed! Released ${result.data.releasedCount} expired reservations and cleaned ${result.data.cleanedCount} old records.`,
+        );
         window.location.reload();
       } else {
-        alert('Cleanup failed: ' + result.error);
+        alert("Cleanup failed: " + result.error);
       }
     } catch (error) {
-      alert('Error running cleanup: ' + error.message);
+      alert("Error running cleanup: " + error.message);
     } finally {
       setLoading(false);
     }

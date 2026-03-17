@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     if (!authResult.success || authResult.user?.role !== "ADMIN") {
       return NextResponse.json(
         { error: "Unauthorized - Admin access required" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -19,14 +19,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: "Cleanup completed successfully",
-      data: result
+      data: result,
     });
-
   } catch (error) {
     console.error("Cleanup API error:", error);
     return NextResponse.json(
       { error: "Failed to run cleanup" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
