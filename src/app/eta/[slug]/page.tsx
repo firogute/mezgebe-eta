@@ -36,6 +36,25 @@ export default async function EtaDetailPage({
 
   if (!event) return notFound();
 
+  const winnerTickets = await prisma.ticket.findMany({
+    where: {
+      eventId: event.id,
+      status: "WINNER",
+    },
+    orderBy: { ticketNumber: "asc" },
+    include: {
+      reservation: {
+        include: {
+          user: {
+            select: {
+              username: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
   const availableTickets = event._count.tickets;
   const isExpired = new Date(event.deadline) < new Date();
   const hasSeparateAmharicDescription =
@@ -80,7 +99,11 @@ export default async function EtaDetailPage({
                   Deadline Countdown
                 </div>
                 <div className="text-sm font-bold text-accent">
-                  <CountdownText deadline={event.deadline} showLabel={false} />
+                  <CountdownText
+                    deadline={event.deadline}
+                    showLabel={false}
+                    eventStatus={event.status}
+                  />
                 </div>
               </div>
             </div>
@@ -109,8 +132,32 @@ export default async function EtaDetailPage({
         <aside className="bg-card border border-border rounded-2xl p-6 md:p-8 h-fit lg:sticky lg:top-6 shadow-sm">
           <h2 className="text-xl font-semibold mb-4">Ticket Selection</h2>
           {event.status === "LOTTERY_COMPLETED" ? (
-            <div className="p-4 bg-yellow-50 border border-yellow-200 text-center rounded-xl text-yellow-800 font-medium">
-              🏆 Lottery Completed! Winners have been selected.
+            <div className="space-y-3">
+              <div className="p-4 bg-yellow-50 border border-yellow-200 text-center rounded-xl text-yellow-800 font-medium">
+                Lottery Completed. Winners have been selected.
+              </div>
+              {winnerTickets.length > 0 ? (
+                <div className="rounded-xl border border-green-200 bg-green-50 p-4">
+                  <p className="text-sm font-semibold text-green-800 mb-2">
+                    Winner List
+                  </p>
+                  <div className="space-y-2 text-sm text-green-900">
+                    {winnerTickets.map((ticket) => (
+                      <div
+                        key={ticket.id}
+                        className="flex items-center justify-between rounded-md bg-white/70 px-2.5 py-1.5"
+                      >
+                        <span className="font-medium">
+                          @{ticket.reservation?.user?.username || "unknown"}
+                        </span>
+                        <span className="text-xs text-green-700">
+                          Ticket #{ticket.ticketNumber.split("-").pop()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : isExpired || event.status === "ENDED" ? (
             <div className="p-4 bg-muted text-center rounded-xl text-muted-foreground font-medium">

@@ -47,10 +47,25 @@ export default async function ReceiptPage({
       </div>
 
       <div className="bg-card border border-border rounded-2xl p-6 md:p-8 shadow-sm">
-        <h1 className="text-2xl font-bold text-foreground mb-6">My Receipts</h1>
+        <div className="relative overflow-hidden rounded-2xl border border-border bg-linear-to-br from-primary/10 via-accent/10 to-background px-5 py-5 md:px-6">
+          <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-primary/20 blur-2xl" />
+          <div className="pointer-events-none absolute -left-12 -bottom-12 h-32 w-32 rounded-full bg-accent/20 blur-2xl" />
+          <div className="relative">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary/70">
+              ETA Ticket Center
+            </p>
+            <h1 className="mt-2 text-2xl font-bold text-foreground md:text-3xl">
+              Ticket Cut Receipts
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+              Check your cut-ticket history, payment status, and winner updates
+              for ETA and Ixa events.
+            </p>
+          </div>
+        </div>
 
         <form
-          className="flex flex-col sm:flex-row gap-2 mb-5"
+          className="mt-6 flex flex-col sm:flex-row gap-2 mb-5"
           method="GET"
           action="/receipt"
         >
@@ -89,11 +104,23 @@ export default async function ReceiptPage({
         )}
 
         {user && (
-          <div className="mb-6 rounded-xl border border-border bg-muted/20 p-4 text-sm">
-            <p className="text-muted-foreground">Phone Number</p>
-            <p className="mt-1 font-semibold text-foreground">
-              {user.phone || "Not available"}
-            </p>
+          <div className="mb-6 grid gap-3 rounded-xl border border-border bg-muted/20 p-4 text-sm md:grid-cols-2">
+            <div className="rounded-lg border border-border bg-background/80 p-3">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Username
+              </p>
+              <p className="mt-1 font-semibold text-foreground">
+                @{user.username}
+              </p>
+            </div>
+            <div className="rounded-lg border border-border bg-background/80 p-3">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Phone Number
+              </p>
+              <p className="mt-1 font-semibold text-foreground">
+                {user.phone || "Not available"}
+              </p>
+            </div>
           </div>
         )}
 
@@ -142,10 +169,16 @@ export default async function ReceiptPage({
             );
 
             return (
-              <div key={res.id} className="border border-border rounded-xl p-5">
+              <div
+                key={res.id}
+                className="border border-border rounded-xl p-5 bg-linear-to-b from-background to-muted/20"
+              >
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
                   <div>
-                    <h3 className="font-semibold text-lg">
+                    <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+                      Ticket Cut Receipt
+                    </p>
+                    <h3 className="font-semibold text-lg mt-1">
                       {res.tickets[0]?.event?.title}
                     </h3>
                     <p className="text-sm text-muted-foreground">
@@ -154,7 +187,7 @@ export default async function ReceiptPage({
                     {hasWinners && (
                       <div className="mt-2">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                          🏆 Winner!
+                          Winner Ticket
                         </span>
                       </div>
                     )}
@@ -180,7 +213,7 @@ export default async function ReceiptPage({
                           }`}
                         >
                           {t.ticketNumber}
-                          {t.status === "WINNER" && " 🏆"}
+                          {t.status === "WINNER" && " *"}
                         </span>
                       ))}
                     </div>
@@ -192,6 +225,18 @@ export default async function ReceiptPage({
                     )}
                   </div>
                   <div className="text-right">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                      Username
+                    </p>
+                    <p className="text-sm font-semibold text-foreground mt-1">
+                      @{user.username}
+                    </p>
+                    <p className="mt-3 text-xs text-muted-foreground uppercase tracking-wide">
+                      Phone
+                    </p>
+                    <p className="text-sm font-semibold text-foreground mt-1">
+                      {user.phone || "Not available"}
+                    </p>
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">
                       Total Amount
                     </p>

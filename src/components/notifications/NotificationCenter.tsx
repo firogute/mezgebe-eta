@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { Bell } from "lucide-react";
 
 type NotificationItem = {
@@ -41,6 +41,7 @@ export function NotificationCenter({
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const query = useMemo(() => {
     const base = `/api/notifications?audience=${audience}`;
     if (audience === "USER" && username) {
@@ -89,6 +90,37 @@ export function NotificationCenter({
     };
   }, [audience, query, username]);
 
+  // Click outside to close
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent | TouchEvent | PointerEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    if (open) {
+      document.addEventListener("pointerdown", handleClickOutside, true);
+      document.addEventListener("mousedown", handleClickOutside, true);
+      document.addEventListener("touchstart", handleClickOutside, true);
+      document.addEventListener("keydown", handleEscape);
+      return () => {
+        document.removeEventListener("pointerdown", handleClickOutside, true);
+        document.removeEventListener("mousedown", handleClickOutside, true);
+        document.removeEventListener("touchstart", handleClickOutside, true);
+        document.removeEventListener("keydown", handleEscape);
+      };
+    }
+  }, [open]);
+
   async function markAllAsRead() {
     try {
       await fetch("/api/notifications/mark-read", {
@@ -113,7 +145,7 @@ export function NotificationCenter({
       : "absolute right-0 top-11 w-[340px] max-w-[85vw]";
 
   return (
-    <div className="relative z-80">
+    <div className="relative z-80" ref={dropdownRef}>
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}

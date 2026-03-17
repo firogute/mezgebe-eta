@@ -10,18 +10,31 @@ export const dynamic = "force-dynamic";
 export default async function HomePage() {
   await releaseExpiredReservations();
 
-  const activeEvents = await prisma.etaEvent.findMany({
-    where: {
-      deadline: { gt: new Date() },
-    },
+  const recentEvents = await prisma.etaEvent.findMany({
     include: {
       _count: {
         select: {
           tickets: { where: { status: "AVAILABLE" } },
         },
       },
+      tickets: {
+        where: { status: "WINNER" },
+        take: 3,
+        include: {
+          reservation: {
+            include: {
+              user: {
+                select: {
+                  username: true,
+                },
+              },
+            },
+          },
+        },
+      },
     },
-    orderBy: { deadline: "asc" },
+    orderBy: { createdAt: "desc" },
+    take: 10,
   });
 
   return (
@@ -48,30 +61,38 @@ export default async function HomePage() {
 
       <main>
         <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <h2 className="text-2xl font-semibold">Active Raffles</h2>
+          <h2 className="text-2xl font-semibold">Recent Raffles</h2>
           <p className="text-sm text-muted-foreground sm:text-right">
-            Tap any card to view details and cut tickets
+            Showing latest 10 events. Tap a card for details or winners.
           </p>
         </div>
 
-        {activeEvents.length === 0 ? (
+        {recentEvents.length === 0 ? (
           <div className="rounded-xl border border-border bg-card py-12 text-center">
             <p className="text-muted-foreground">
-              No active raffles available at the moment.
+              No raffles available at the moment.
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-            {activeEvents.map((event) => {
+            {recentEvents.map((event) => {
               const availableTickets = event._count.tickets;
               const isSoldOut = availableTickets === 0;
+              const isExpired = new Date(event.deadline) < new Date();
+              const isEnded =
+                isExpired ||
+                event.status === "ENDED" ||
+                event.status === "LOTTERY_COMPLETED";
+              const winners = event.tickets
+                .map((ticket) => ticket.reservation?.user?.username)
+                .filter((value): value is string => Boolean(value));
 
               return (
                 <Link key={event.id} href={`/eta/${event.id}`}>
                   <article
                     className={
                       "group h-full overflow-hidden rounded-2xl border border-border bg-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg " +
-                      (isSoldOut ? "opacity-75 grayscale" : "")
+                      (isSoldOut || isEnded ? "opacity-80" : "")
                     }
                   >
                     {event.image ? (
@@ -105,7 +126,15 @@ export default async function HomePage() {
 
                       <div className="mt-4 flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
                         <div className="text-muted-foreground">
-                          {isSoldOut ? (
+                          {event.status === "LOTTERY_COMPLETED" ? (
+                            <span className="font-medium text-green-600">
+                              Winners Selected
+                            </span>
+                          ) : isEnded ? (
+                            <span className="font-medium text-amber-600">
+                              Ended
+                            </span>
+                          ) : isSoldOut ? (
                             <span className="font-medium text-red-500">
                               Sold Out
                             </span>
@@ -119,12 +148,27 @@ export default async function HomePage() {
                           )}
                         </div>
                         <div className="text-xs font-medium text-muted-foreground sm:text-right">
-                          <CountdownText deadline={event.deadline} />
+                          <CountdownText
+                            deadline={event.deadline}
+                            eventStatus={event.status}
+                          />
                         </div>
                       </div>
 
+                      {winners.length > 0 && (
+                        <p className="mt-3 rounded-lg border border-green-200 bg-green-50 px-2.5 py-2 text-xs text-green-800">
+                          Winners: {winners.join(", ")}
+                        </p>
+                      )}
+
                       <div className="mt-5 w-full rounded-lg bg-primary py-2.5 text-center font-medium text-primary-foreground transition-all group-hover:bg-primary/90 active:scale-[0.99]">
-                        {isSoldOut ? "View Details" : "Cut Ticket"}
+                        {event.status === "LOTTERY_COMPLETED"
+                          ? "View Winners"
+                          : isEnded
+                            ? "Ended"
+                            : isSoldOut
+                              ? "View Details"
+                              : "Cut Ticket"}
                       </div>
                     </div>
                   </article>

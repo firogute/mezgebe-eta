@@ -3,8 +3,13 @@ import prisma from "@/lib/prisma";
 import { EtaEventActions } from "./components/EtaEventActions";
 import Image from "next/image";
 import { CountdownText } from "@/components/ui/CountdownText";
+import { releaseExpiredReservations } from "@/lib/actions/reservation";
+import { CleanupButton } from "./components/CleanupButton";
 
 export default async function AdminDashboard() {
+  // Clean up expired reservations
+  await releaseExpiredReservations();
+
   // Fetch Analytics
   const [totalEvents, totalUsers, pendingPayments, soldTickets] =
     await Promise.all([
@@ -16,8 +21,33 @@ export default async function AdminDashboard() {
       prisma.ticket.count({ where: { status: "SOLD" } }),
     ]);
 
+  const now = new Date();
+
   const activeEvents = await prisma.etaEvent.findMany({
+    where: {
+      status: "ACTIVE",
+      deadline: { gt: now },
+    },
     orderBy: { createdAt: "desc" },
+    take: 8,
+    include: {
+      tickets: {
+        select: {
+          status: true,
+        },
+      },
+    },
+  });
+
+  const pastEvents = await prisma.etaEvent.findMany({
+    where: {
+      OR: [
+        { status: "ENDED" },
+        { status: "LOTTERY_COMPLETED" },
+        { deadline: { lte: now } },
+      ],
+    },
+    orderBy: { deadline: "desc" },
     take: 8,
     include: {
       tickets: {
@@ -91,6 +121,7 @@ export default async function AdminDashboard() {
             >
               Review Payments
             </Link>
+            <CleanupButton />
           </div>
         </div>
       </section>
@@ -208,7 +239,10 @@ export default async function AdminDashboard() {
 
                       <div className="flex items-center justify-between gap-3">
                         <p className="rounded-full border border-border bg-muted/40 px-2.5 py-1 text-xs text-muted-foreground">
-                          <CountdownText deadline={event.deadline} />
+                          <CountdownText
+                            deadline={event.deadline}
+                            eventStatus={event.status}
+                          />
                         </p>
                         <div className="flex items-center gap-2">
                           <Link
@@ -231,6 +265,90 @@ export default async function AdminDashboard() {
             })}
           </div>
         )}
+      </section>
+
+      {/* Past/Completed Events Section */}
+      <section className="space-y-4">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <h2 className="text-xl font-semibold text-foreground">
+            Past / Completed Events
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            View results and winners of completed events.
+          </p>
+        </div>
+
+        {(() => {
+          return pastEvents.length === 0 ? (
+            <div className="p-8 text-center bg-card border border-border rounded-xl text-muted-foreground">
+              No past events yet.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {pastEvents.map((event) => {
+                const soldCount = event.tickets.filter(
+                  (ticket) => ticket.status === "SOLD",
+                ).length;
+                const winnerCount = event.winnerCount || 0;
+
+                return (
+                  <article
+                    key={event.id}
+                    className="overflow-hidden rounded-2xl border border-border bg-card/50 shadow-sm"
+                  >
+                    <div className="grid md:grid-cols-[120px_1fr] gap-0">
+                      <div className="relative h-32 md:h-full bg-muted/50">
+                        {event.image ? (
+                          <Image
+                            src={event.image}
+                            alt={event.title}
+                            fill
+                            className="object-cover opacity-75"
+                          />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center text-2xl text-primary/30">
+                            🎟️
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="p-3 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <Link
+                              href={`/admin/eta/${event.id}`}
+                              className="text-sm font-semibold text-foreground hover:text-primary hover:underline line-clamp-1"
+                            >
+                              {event.title}
+                            </Link>
+                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                              {event.descriptionEn}
+                            </p>
+                          </div>
+                          <span className="text-xs rounded-full px-1.5 py-0.5 bg-green-100 text-green-700 font-semibold whitespace-nowrap">
+                            {winnerCount} winners
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs text-muted-foreground">
+                            {soldCount} tickets sold
+                          </span>
+                          <Link
+                            href={`/admin/eta/${event.id}`}
+                            className="rounded-md bg-muted px-2 py-1 text-xs font-semibold text-foreground transition-colors hover:bg-muted/80"
+                          >
+                            View Results
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          );
+        })()}
       </section>
     </div>
   );
