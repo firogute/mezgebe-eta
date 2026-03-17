@@ -6,6 +6,8 @@ import { CountdownText } from "@/components/ui/CountdownText";
 import { releaseExpiredReservations } from "@/lib/actions/reservation";
 import { CleanupButton } from "./components/CleanupButton";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminDashboard() {
   // Clean up expired reservations
   await releaseExpiredReservations();
@@ -26,7 +28,6 @@ export default async function AdminDashboard() {
   const activeEvents = await prisma.etaEvent.findMany({
     where: {
       status: "ACTIVE",
-      deadline: { gt: now },
       tickets: {
         none: {
           status: "WINNER",
