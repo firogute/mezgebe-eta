@@ -33,6 +33,7 @@ export async function createEtaEvent(data: {
   descriptionEn: string;
   ticketPrice: number;
   totalTickets: number;
+  winnerCount: number;
   deadline: Date;
   bankType: string;
   accountName: string;
@@ -53,6 +54,7 @@ export async function createEtaEvent(data: {
       descriptionAm,
       ticketPrice: data.ticketPrice,
       totalTickets: data.totalTickets,
+      winnerCount: data.winnerCount,
       deadline: data.deadline,
       bankType,
       accountName,
@@ -92,6 +94,7 @@ export async function updateEtaEventAdmin(data: {
   title: string;
   descriptionEn: string;
   ticketPrice: number;
+  winnerCount: number;
   deadline: Date;
   bankType: string;
   accountName: string;
@@ -114,6 +117,7 @@ export async function updateEtaEventAdmin(data: {
         descriptionEn: normalizedDescription,
         descriptionAm,
         ticketPrice: data.ticketPrice,
+        winnerCount: data.winnerCount,
         deadline: data.deadline,
         bankType,
         accountName,

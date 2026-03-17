@@ -148,6 +148,7 @@ export default function CreateEtaPage() {
         descriptionEn: formData.get("descriptionEn") as string,
         ticketPrice: parseFloat(formData.get("ticketPrice") as string),
         totalTickets: parseInt(formData.get("totalTickets") as string),
+        winnerCount: parseInt(formData.get("winnerCount") as string),
         deadline: new Date(formData.get("deadline") as string),
         bankType: formData.get("bankType") as string,
         accountName: formData.get("accountName") as string,
@@ -209,7 +210,7 @@ export default function CreateEtaPage() {
             ></textarea>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">
                 Ticket Price (Birr)
@@ -231,6 +232,19 @@ export default function CreateEtaPage() {
                 type="number"
                 required
                 min="1"
+                className="w-full p-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Number of Winners
+              </label>
+              <input
+                name="winnerCount"
+                type="number"
+                required
+                min="1"
+                defaultValue="1"
                 className="w-full p-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
               />
             </div>

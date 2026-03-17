@@ -9,7 +9,7 @@ import { useAdminToast } from "@/app/admin/components/AdminToastProvider";
 type TicketRow = {
   id: string;
   ticketNumber: string;
-  status: "AVAILABLE" | "RESERVED" | "SOLD";
+  status: "AVAILABLE" | "RESERVED" | "SOLD" | "WINNER";
   eventTitle: string;
   username: string | null;
   phone: string | null;

@@ -17,6 +17,7 @@ enum TicketStatus {
   AVAILABLE
   RESERVED
   SOLD
+  WINNER
 }
 
 enum ReservationStatus {
@@ -30,6 +31,12 @@ enum PaymentStatus {
   PENDING
   VERIFIED
   REJECTED
+}
+
+enum EventStatus {
+  ACTIVE
+  ENDED
+  LOTTERY_COMPLETED
 }
 
 enum NotificationAudience {
@@ -50,8 +57,8 @@ model User {
 }
 
 model EtaEvent {
-  id            String   @id @default(cuid())
-  eventCode     Int      @unique @default(autoincrement())
+  id            String      @id @default(cuid())
+  eventCode     Int         @unique @default(autoincrement())
   title         String
   descriptionEn String
   descriptionAm String?
@@ -62,9 +69,12 @@ model EtaEvent {
   bankType      String?
   accountName   String?
   accountNumber String?
+  status        EventStatus @default(ACTIVE)
+  lotteryRunAt  DateTime?
+  winnerCount   Int         @default(1)
   tickets       Ticket[]
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 }
 
 model Ticket {

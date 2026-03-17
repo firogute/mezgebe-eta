@@ -108,9 +108,13 @@ export default async function EtaDetailPage({
 
         <aside className="bg-card border border-border rounded-2xl p-6 md:p-8 h-fit lg:sticky lg:top-6 shadow-sm">
           <h2 className="text-xl font-semibold mb-4">Ticket Selection</h2>
-          {isExpired ? (
+          {event.status === "LOTTERY_COMPLETED" ? (
+            <div className="p-4 bg-yellow-50 border border-yellow-200 text-center rounded-xl text-yellow-800 font-medium">
+              🏆 Lottery Completed! Winners have been selected.
+            </div>
+          ) : isExpired || event.status === "ENDED" ? (
             <div className="p-4 bg-muted text-center rounded-xl text-muted-foreground font-medium">
-              This raffle has ended.
+              This raffle has ended. Lottery will be run soon.
             </div>
           ) : availableTickets === 0 ? (
             <div className="p-4 bg-muted text-center rounded-xl text-muted-foreground font-medium">

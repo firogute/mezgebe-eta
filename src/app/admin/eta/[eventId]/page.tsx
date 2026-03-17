@@ -186,7 +186,7 @@ export default async function AdminEtaDetailPage({
           >
             Back To Dashboard
           </Link>
-          <EtaEventActions eventId={event.id} />
+          <EtaEventActions eventId={event.id} eventStatus={event.status} />
         </div>
       </div>
 

@@ -217,7 +217,11 @@ export default async function AdminDashboard() {
                           >
                             Open Analytics
                           </Link>
-                          <EtaEventActions eventId={event.id} compact />
+                          <EtaEventActions
+                            eventId={event.id}
+                            eventStatus={event.status}
+                            compact
+                          />
                         </div>
                       </div>
                     </div>

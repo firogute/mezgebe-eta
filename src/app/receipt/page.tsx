@@ -133,6 +133,14 @@ export default async function ReceiptPage({
                     ? "bg-gray-100 text-gray-800"
                     : "bg-red-100 text-red-800";
 
+            // Check if any tickets are winners
+            const hasWinners = res.tickets.some(
+              (ticket) => ticket.status === "WINNER",
+            );
+            const winnerTickets = res.tickets.filter(
+              (ticket) => ticket.status === "WINNER",
+            );
+
             return (
               <div key={res.id} className="border border-border rounded-xl p-5">
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-4">
@@ -143,6 +151,13 @@ export default async function ReceiptPage({
                     <p className="text-sm text-muted-foreground">
                       {new Date(res.createdAt).toLocaleDateString()}
                     </p>
+                    {hasWinners && (
+                      <div className="mt-2">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                          🏆 Winner!
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <span
                     className={`${statusClass} px-3 py-1 rounded-full text-xs font-semibold w-fit`}
@@ -158,12 +173,23 @@ export default async function ReceiptPage({
                       {res.tickets.map((t) => (
                         <span
                           key={t.id}
-                          className="bg-background border border-border px-2 py-1 rounded text-sm font-mono text-primary"
+                          className={`px-2 py-1 rounded text-sm font-mono ${
+                            t.status === "WINNER"
+                              ? "bg-yellow-100 border-yellow-300 text-yellow-800 border"
+                              : "bg-background border border-border text-primary"
+                          }`}
                         >
                           {t.ticketNumber}
+                          {t.status === "WINNER" && " 🏆"}
                         </span>
                       ))}
                     </div>
+                    {hasWinners && (
+                      <p className="text-xs text-yellow-700 mt-2 font-medium">
+                        Congratulations! You have {winnerTickets.length} winning
+                        ticket(s)!
+                      </p>
+                    )}
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-muted-foreground uppercase tracking-wide">

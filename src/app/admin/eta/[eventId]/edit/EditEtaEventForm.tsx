@@ -23,6 +23,7 @@ type EditEtaEventFormProps = {
   initialTitle: string;
   initialDescriptionEn: string;
   initialTicketPrice: number;
+  initialWinnerCount: number;
   initialDeadlineValue: string;
   initialBankType?: string | null;
   initialAccountName?: string | null;
@@ -37,6 +38,9 @@ export default function EditEtaEventForm(props: EditEtaEventFormProps) {
   );
   const [ticketPrice, setTicketPrice] = useState(
     String(props.initialTicketPrice),
+  );
+  const [winnerCount, setWinnerCount] = useState(
+    String(props.initialWinnerCount),
   );
   const [deadline, setDeadline] = useState(props.initialDeadlineValue);
   const [bankType, setBankType] = useState(props.initialBankType || "");
@@ -66,6 +70,7 @@ export default function EditEtaEventForm(props: EditEtaEventFormProps) {
       title,
       descriptionEn,
       ticketPrice: parseFloat(ticketPrice),
+      winnerCount: parseInt(winnerCount),
       deadline: new Date(deadline),
       bankType,
       accountName,
@@ -118,7 +123,7 @@ export default function EditEtaEventForm(props: EditEtaEventFormProps) {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1">
             Ticket Price (Birr)
@@ -126,6 +131,19 @@ export default function EditEtaEventForm(props: EditEtaEventFormProps) {
           <input
             value={ticketPrice}
             onChange={(e) => setTicketPrice(e.target.value)}
+            type="number"
+            min="1"
+            required
+            className="w-full p-2 border border-border rounded-md bg-background focus:ring-2 focus:ring-primary outline-none"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Number of Winners
+          </label>
+          <input
+            value={winnerCount}
+            onChange={(e) => setWinnerCount(e.target.value)}
             type="number"
             min="1"
             required
