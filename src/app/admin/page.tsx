@@ -27,6 +27,11 @@ export default async function AdminDashboard() {
     where: {
       status: "ACTIVE",
       deadline: { gt: now },
+      tickets: {
+        none: {
+          status: "WINNER",
+        },
+      },
     },
     orderBy: { createdAt: "desc" },
     take: 8,
@@ -45,6 +50,13 @@ export default async function AdminDashboard() {
         { status: "ENDED" },
         { status: "LOTTERY_COMPLETED" },
         { deadline: { lte: now } },
+        {
+          tickets: {
+            some: {
+              status: "WINNER",
+            },
+          },
+        },
       ],
     },
     orderBy: { deadline: "desc" },
@@ -53,6 +65,17 @@ export default async function AdminDashboard() {
       tickets: {
         select: {
           status: true,
+          ticketNumber: true,
+          reservation: {
+            select: {
+              user: {
+                select: {
+                  username: true,
+                  phone: true,
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -289,7 +312,10 @@ export default async function AdminDashboard() {
                 const soldCount = event.tickets.filter(
                   (ticket) => ticket.status === "SOLD",
                 ).length;
-                const winnerCount = event.winnerCount || 0;
+                const winnerTickets = event.tickets.filter(
+                  (ticket) => ticket.status === "WINNER",
+                );
+                const winnerCount = winnerTickets.length;
 
                 return (
                   <article
@@ -341,6 +367,32 @@ export default async function AdminDashboard() {
                             View Results
                           </Link>
                         </div>
+
+                        {winnerTickets.length > 0 && (
+                          <div className="rounded-lg border border-green-200 bg-green-50 p-2">
+                            <p className="text-[11px] font-semibold uppercase tracking-wide text-green-800">
+                              Winner Contacts
+                            </p>
+                            <div className="mt-1 space-y-1">
+                              {winnerTickets.map((ticket) => (
+                                <div
+                                  key={ticket.ticketNumber}
+                                  className="flex items-center justify-between gap-2 text-xs"
+                                >
+                                  <span className="font-medium text-green-900">
+                                    @
+                                    {ticket.reservation?.user?.username ||
+                                      "unknown"}
+                                  </span>
+                                  <span className="text-green-800">
+                                    {ticket.reservation?.user?.phone ||
+                                      "No phone"}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </article>

@@ -23,22 +23,60 @@ export async function verifyPayment(
 
     if (!payment) return { success: false, error: "Payment not found" };
 
+    const ticketIds = payment.reservation.tickets.map((t) => t.id);
+
     if (action === "APPROVE") {
-      // 1. Mark Payment as VERIFIED
-      await prisma.payment.update({
-        where: { id: paymentId },
-        data: { status: "VERIFIED" },
+      if (payment.status !== "PENDING") {
+        return {
+          success: false,
+          error: "Only pending payments can be approved.",
+        };
+      }
+
+      if (payment.reservation.status !== "PENDING") {
+        return {
+          success: false,
+          error: "Only pending reservations can be approved.",
+        };
+      }
+
+      const nonReservedTicketCount = await prisma.ticket.count({
+        where: {
+          id: { in: ticketIds },
+          OR: [
+            { status: { not: "RESERVED" } },
+            { reservationId: { not: payment.reservationId } },
+          ],
+        },
       });
-      // 2. Mark Reservation as APPROVED
-      await prisma.reservation.update({
-        where: { id: payment.reservationId },
-        data: { status: "APPROVED" },
-      });
-      // 3. Mark Tickets as SOLD
-      const ticketIds = payment.reservation.tickets.map((t) => t.id);
-      await prisma.ticket.updateMany({
-        where: { id: { in: ticketIds } },
-        data: { status: "SOLD" },
+
+      if (nonReservedTicketCount > 0) {
+        return {
+          success: false,
+          error:
+            "Cannot approve because some tickets are not in RESERVED state for this reservation.",
+        };
+      }
+
+      await prisma.$transaction(async (tx) => {
+        await tx.payment.update({
+          where: { id: paymentId },
+          data: { status: "VERIFIED" },
+        });
+
+        await tx.reservation.update({
+          where: { id: payment.reservationId },
+          data: { status: "APPROVED" },
+        });
+
+        await tx.ticket.updateMany({
+          where: {
+            id: { in: ticketIds },
+            reservationId: payment.reservationId,
+            status: "RESERVED",
+          },
+          data: { status: "SOLD" },
+        });
       });
 
       await createUserNotification({
@@ -55,22 +93,21 @@ export async function verifyPayment(
         link: "/admin/payments",
       });
     } else {
-      // REJECT action
-      // 1. Mark Payment as REJECTED
-      await prisma.payment.update({
-        where: { id: paymentId },
-        data: { status: "REJECTED" },
-      });
-      // 2. Mark Reservation as REJECTED
-      await prisma.reservation.update({
-        where: { id: payment.reservationId },
-        data: { status: "REJECTED" },
-      });
-      // 3. Return Tickets to pool
-      const ticketIds = payment.reservation.tickets.map((t) => t.id);
-      await prisma.ticket.updateMany({
-        where: { id: { in: ticketIds } },
-        data: { status: "AVAILABLE", reservationId: null },
+      await prisma.$transaction(async (tx) => {
+        await tx.payment.update({
+          where: { id: paymentId },
+          data: { status: "REJECTED" },
+        });
+
+        await tx.reservation.update({
+          where: { id: payment.reservationId },
+          data: { status: "REJECTED" },
+        });
+
+        await tx.ticket.updateMany({
+          where: { id: { in: ticketIds } },
+          data: { status: "AVAILABLE", reservationId: null },
+        });
       });
 
       await createUserNotification({

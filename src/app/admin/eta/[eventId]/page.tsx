@@ -51,7 +51,7 @@ export default async function AdminEtaDetailPage({
   }
 
   const soldCount = event.tickets.filter(
-    (ticket) => ticket.status === "SOLD",
+    (ticket) => ticket.status === "SOLD" || ticket.status === "WINNER",
   ).length;
   const reservedCount = event.tickets.filter(
     (ticket) => ticket.status === "RESERVED",
@@ -59,6 +59,12 @@ export default async function AdminEtaDetailPage({
   const availableCount = event.tickets.filter(
     (ticket) => ticket.status === "AVAILABLE",
   ).length;
+  const hasWinnerTickets = event.tickets.some(
+    (ticket) => ticket.status === "WINNER",
+  );
+  const effectiveEventStatus = hasWinnerTickets
+    ? "LOTTERY_COMPLETED"
+    : event.status;
   const occupancyRate =
     event.totalTickets === 0
       ? 0
@@ -186,7 +192,10 @@ export default async function AdminEtaDetailPage({
           >
             Back To Dashboard
           </Link>
-          <EtaEventActions eventId={event.id} eventStatus={event.status} />
+          <EtaEventActions
+            eventId={event.id}
+            eventStatus={effectiveEventStatus}
+          />
         </div>
       </div>
 
@@ -209,7 +218,10 @@ export default async function AdminEtaDetailPage({
             </div>
             <div className="space-y-5 p-6">
               <div className="inline-flex rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-                <CountdownText deadline={event.deadline} />
+                <CountdownText
+                  deadline={event.deadline}
+                  eventStatus={effectiveEventStatus}
+                />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-2xl border border-border bg-background/60 p-4">

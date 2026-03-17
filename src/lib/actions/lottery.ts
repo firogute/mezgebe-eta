@@ -33,12 +33,41 @@ export async function runLottery(eventId: string) {
       };
     }
 
-    const soldTickets = event.tickets.filter(
-      (ticket) => ticket.status === "SOLD",
-    );
+    const invalidSoldTickets = event.tickets.filter((ticket) => {
+      const reservation = ticket.reservation;
+      return !(
+        reservation &&
+        reservation.status === "APPROVED" &&
+        reservation.payment?.status === "VERIFIED"
+      );
+    });
+
+    // Safety net: if a ticket was incorrectly marked SOLD before payment approval,
+    // move it back to RESERVED so it cannot enter the lottery.
+    if (invalidSoldTickets.length > 0) {
+      await prisma.ticket.updateMany({
+        where: {
+          id: { in: invalidSoldTickets.map((ticket) => ticket.id) },
+          status: "SOLD",
+        },
+        data: { status: "RESERVED" },
+      });
+    }
+
+    const soldTickets = event.tickets.filter((ticket) => {
+      const reservation = ticket.reservation;
+      return (
+        ticket.status === "SOLD" &&
+        reservation?.status === "APPROVED" &&
+        reservation.payment?.status === "VERIFIED"
+      );
+    });
 
     if (soldTickets.length === 0) {
-      return { success: false, error: "No sold tickets to run lottery with" };
+      return {
+        success: false,
+        error: "No approved sold tickets to run lottery with",
+      };
     }
 
     // Randomly select winners
