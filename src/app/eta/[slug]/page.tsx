@@ -39,7 +39,7 @@ export default async function EtaDetailPage({
   const availableTickets = event._count.tickets;
   const isExpired = new Date(event.deadline) < new Date();
   const hasSeparateAmharicDescription =
-    Boolean(event.descriptionAm) &&
+    event.descriptionAm &&
     event.descriptionAm.trim() !== event.descriptionEn.trim();
 
   return (

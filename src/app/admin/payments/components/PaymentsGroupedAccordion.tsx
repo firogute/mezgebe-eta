@@ -8,6 +8,8 @@ import type { PaymentProofData } from "@/lib/paymentProof";
 
 export type PaymentRowData = {
   id: string;
+  eventId: string;
+  eventTitle: string;
   username: string;
   phone: string | null;
   method: string;
